@@ -45,9 +45,24 @@ export function WorksPage({ works, isAdmin, initialQuery = "", userPlan }: { wor
         <SearchBar placeholder="მოძებნე ნაწარმოები, ავტორი, ჟანრი ან საკვანძო სიტყვა" value={query} onChange={setQuery} />
       </GlassCard>
       <div className="grid gap-4 xl:grid-cols-2">
-        {filteredWorks.map((work) => (
-          <GlassCard key={work.slug} className="h-full p-5 transition hover:-translate-y-1">
-            <Link href={`/works/${work.slug}`}>
+        {filteredWorks.map((work) => {
+          const workHref = work.slug?.trim() ? `/works/${work.slug}` : null;
+
+          if (!workHref && process.env.NODE_ENV !== "production") {
+            console.error("Missing work slug in works page", { workId: work.id, title: work.title });
+          }
+
+          return (
+          <GlassCard key={work.id} className="h-full cursor-pointer p-5 transition hover:-translate-y-1 hover:border-[rgba(244,177,93,0.24)] hover:bg-white/[0.07]">
+            <Link
+              href={workHref ?? "#"}
+              className={workHref ? "block" : "block cursor-not-allowed"}
+              onClick={(event) => {
+                if (!workHref) {
+                  event.preventDefault();
+                }
+              }}
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="font-serif text-2xl text-white">{work.title}</h3>
@@ -66,9 +81,20 @@ export function WorksPage({ works, isAdmin, initialQuery = "", userPlan }: { wor
                 ))}
               </div>
             </Link>
-            {isAdmin ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+            <div className="mt-4 flex items-center justify-between gap-3">
+              {workHref ? (
+                <Link href={workHref} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
+                  გახსნა
+                </Link>
+              ) : (
+                <span className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[color:var(--muted)]">
+                  slug არ არის
+                </span>
+              )}
+              {isAdmin ? <WorkInlineEditor work={work} compact /> : null}
+            </div>
           </GlassCard>
-        ))}
+        )})}
       </div>
       {works.length > 0 && filteredWorks.length === 0 ? (
         <EmptyState title="შედეგი ვერ მოიძებნა." description="სცადეთ სხვა სათაური, ავტორი, ჟანრი ან საკვანძო სიტყვა." />

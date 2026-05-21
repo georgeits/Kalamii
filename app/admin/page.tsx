@@ -5,6 +5,7 @@ import {
   ADMIN_EMAIL,
   getAuthors,
   getCurrentProfile,
+  getLibraryData,
   getSubscriptions,
   getWorks,
 } from "@/src/lib/content";
@@ -20,15 +21,21 @@ export default async function Admin() {
     redirect("/dashboard");
   }
 
-  const [authors, works, subscriptions] = await Promise.all([
+  const [authors, works, subscriptions, libraryData] = await Promise.all([
     getAuthors(),
     getWorks(),
     getSubscriptions(),
+    getLibraryData(),
   ]);
 
   return (
     <AppShell currentPath="/admin">
-      <AdminPage authors={authors} works={works} subscriptions={subscriptions} />
+      <AdminPage
+        authors={authors}
+        works={works}
+        subscriptions={subscriptions}
+        featuredAuthorId={libraryData.featuredAuthorId}
+      />
     </AppShell>
   );
 }

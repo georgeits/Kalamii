@@ -44,10 +44,25 @@ export function AuthorsPage({ authors, isAdmin, initialQuery = "", userPlan }: {
         <SearchBar placeholder="მოძებნე ავტორი, პერიოდი, მიმდინარეობა ან ნაწარმოები" value={query} onChange={setQuery} />
       </GlassCard>
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {filteredAuthors.map((author) => (
-          <GlassCard key={author.slug} className="h-full p-5 transition hover:-translate-y-1">
+        {filteredAuthors.map((author) => {
+          const authorHref = author.slug?.trim() ? `/authors/${author.slug}` : null;
+
+          if (!authorHref && process.env.NODE_ENV !== "production") {
+            console.error("Missing author slug in authors page", { authorId: author.id, name: author.name });
+          }
+
+          return (
+          <GlassCard key={author.id} className="h-full cursor-pointer p-5 transition hover:-translate-y-1 hover:border-[rgba(244,177,93,0.24)] hover:bg-white/[0.07]">
             <div className="flex h-full flex-col">
-              <Link href={`/authors/${author.slug}`} className="block">
+              <Link
+                href={authorHref ?? "#"}
+                className={authorHref ? "block" : "block cursor-not-allowed"}
+                onClick={(event) => {
+                  if (!authorHref) {
+                    event.preventDefault();
+                  }
+                }}
+              >
                 <div className="flex items-start gap-4">
                 <AuthorPortrait name={author.name} imageUrl={author.image_url} className="h-16 w-16 shrink-0 rounded-[20px]" />
                 <div className="min-w-0">
@@ -63,14 +78,20 @@ export function AuthorsPage({ authors, isAdmin, initialQuery = "", userPlan }: {
                 </div>
               </Link>
               <div className="mt-4 flex items-center justify-between gap-3">
-                <Link href={`/authors/${author.slug}`} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
-                  დეტალურად
-                </Link>
+                {authorHref ? (
+                  <Link href={authorHref} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
+                    დეტალურად
+                  </Link>
+                ) : (
+                  <span className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[color:var(--muted)]">
+                    slug არ არის
+                  </span>
+                )}
                 {isAdmin ? <AuthorInlineEditor author={author} compact /> : null}
               </div>
             </div>
           </GlassCard>
-        ))}
+        )})}
       </div>
       {authors.length > 0 && filteredAuthors.length === 0 ? (
         <EmptyState title="შედეგი ვერ მოიძებნა." description="სცადეთ სხვა სახელი, პერიოდი, მიმდინარეობა ან ნაწარმოები." />

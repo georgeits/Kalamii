@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAccessLevelLabel } from "@/src/lib/access";
 import { AuthorPortrait } from "@/components/author-portrait";
-import { assignSubscriptionAction } from "@/app/admin/actions";
+import { assignSubscriptionAction, updateFeaturedAuthorAction } from "@/app/admin/actions";
 import { DeleteAuthorButton, DeleteWorkButton, RemoveSubscriptionButton, SaveButton } from "@/components/admin-server-buttons";
 import { EmptyState, GlassCard, Pill, PremiumButton, SectionTitle } from "@/components/ui";
 import type { AuthorRecord, SubscriptionRecord, WorkRecord } from "@/src/lib/content";
@@ -12,10 +12,12 @@ export function AdminPage({
   authors,
   works,
   subscriptions,
+  featuredAuthorId,
 }: {
   authors: AuthorRecord[];
   works: WorkWithAuthorName[];
   subscriptions: SubscriptionRecord[];
+  featuredAuthorId: string | null;
 }) {
   return (
     <main className="space-y-6 pb-8">
@@ -25,6 +27,31 @@ export function AdminPage({
         description="აირჩიეთ კონკრეტული ავტორი ან ნაწარმოები და გახსენით სუფთა რედაქტირების გვერდი. public გვერდები პირდაპირ იმავე მონაცემს აჩვენებს, რასაც აქ ინახავთ."
         action={<PremiumButton href="/admin/authors/new">ახალი ავტორის დამატება</PremiumButton>}
       />
+
+      <GlassCard className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-2xl text-white">დღის რჩეული ავტორი</h3>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">აირჩიეთ რომელი ავტორი გამოჩნდეს ბიბლიოთეკის ზედა ბლოკში. თუ არაფერი აირჩევა, ბლოკი საერთოდ დაიმალება.</p>
+          </div>
+          <Pill tone="gold">{featuredAuthorId ? "ჩართულია" : "დამალულია"}</Pill>
+        </div>
+
+        <form action={updateFeaturedAuthorAction} className="mt-6 grid gap-4 rounded-[20px] border border-[color:var(--line)] bg-white/[0.04] p-4 md:grid-cols-[1fr_auto] md:items-end">
+          <label className="block">
+            <span className="text-sm text-[color:var(--muted)]">რჩეული ავტორი</span>
+            <select name="featured_author_id" defaultValue={featuredAuthorId ?? ""} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+              <option value="">არ აჩვენო</option>
+              {authors.map((author) => (
+                <option key={author.id} value={author.id}>
+                  {author.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <SaveButton label="შენახვა" />
+        </form>
+      </GlassCard>
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <CatalogSection

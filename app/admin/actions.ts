@@ -254,6 +254,24 @@ export async function assignSubscriptionAction(formData: FormData) {
   redirect("/admin");
 }
 
+export async function updateFeaturedAuthorAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const featuredAuthorId = requiredText(formData, "featured_author_id") || null;
+
+  const { error } = await supabase.from("site_settings").upsert({
+    id: 1,
+    featured_author_id: featuredAuthorId,
+  });
+
+  if (error) {
+    throw new Error(`რჩეული ავტორის შენახვა ვერ მოხერხდა: ${error.message}`);
+  }
+
+  revalidateContentRoutes();
+  redirect("/admin");
+}
+
 export async function removeSubscriptionAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();

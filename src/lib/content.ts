@@ -86,6 +86,10 @@ type CatalogData = {
   works: WorkWithAuthor[];
 };
 
+type SiteSettingsRecord = {
+  featured_author_id: string | null;
+};
+
 function isMissingColumnError(message: string, column: string) {
   return message.toLowerCase().includes(`column ${column.toLowerCase()} does not exist`);
 }
@@ -186,6 +190,33 @@ async function loadCatalogData(): Promise<CatalogData> {
   const [authors, works] = await Promise.all([fetchAuthors(supabase), fetchWorks(supabase)]);
 
   return { authors, works };
+}
+
+async function getSiteSettings(): Promise<SiteSettingsRecord | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("featured_author_id")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Site settings query failed", { error: error.message });
+      }
+      return null;
+    }
+
+    return (data as SiteSettingsRecord | null) ?? null;
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Site settings lookup failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+    return null;
+  }
 }
 
 export function getAccessLevelOptions() {
@@ -416,12 +447,23 @@ export async function getWorkById(id: string) {
 }
 
 export async function getLibraryData() {
-  const [authors, works] = await Promise.all([getAuthorsWithWorks(), getWorkProfiles()]);
+  const [authors, works, siteSettings] = await Promise.all([getAuthorsWithWorks(), getWorkProfiles(), getSiteSettings()]);
+  const featuredAuthor =
+    siteSettings?.featured_author_id
+      ? authors.find((author) => author.id === siteSettings.featured_author_id) ?? null
+      : null;
+
+  if (process.env.NODE_ENV !== "production" && siteSettings?.featured_author_id && !featuredAuthor) {
+    console.error("Featured author setting points to missing author", {
+      featuredAuthorId: siteSettings.featured_author_id,
+    });
+  }
 
   return {
     authors,
     works,
-    featuredAuthor: authors.find((author) => author.slug === "ilia-chavchavadze") ?? authors[0] ?? null,
+    featuredAuthor,
+    featuredAuthorId: siteSettings?.featured_author_id ?? null,
   };
 }
 

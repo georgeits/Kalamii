@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
 import type { QuizQuestion, SummaryChapter } from "@/src/lib/content";
+import { createEmptyQuestion, normalizeQuestion, parseBulkQuizImport, validateQuestions } from "@/src/lib/quiz-editor";
 
 export function AuthorInlineEditor({
   author,
@@ -162,12 +163,44 @@ function EditableWorkInlineEditor({
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>(
     work.quiz_data?.map(normalizeQuestion) ?? [],
   );
+  const [importText, setImportText] = useState("");
+  const [importStatus, setImportStatus] = useState("");
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [, startTransition] = useTransition();
+  const quizErrors = useMemo(() => validateQuestions(quizQuestions), [quizQuestions]);
+  const hasQuizErrors = quizErrors.length > 0;
+
+  function applyImport(nextValue: string) {
+    setImportText(nextValue);
+
+    const value = nextValue.trim();
+    if (!value) {
+      setImportStatus("");
+      return;
+    }
+
+    const result = parseBulkQuizImport(value);
+    if (!result.ok) {
+      setImportStatus(result.error);
+      return;
+    }
+
+    setImportStatus(`${result.questions.length} კითხვა წარმატებით ჩაიტვირთა.`);
+    startTransition(() => {
+      setQuizQuestions(result.questions);
+    });
+  }
 
   async function save() {
     setIsSaving(true);
     setStatus("");
+
+    if (hasQuizErrors) {
+      setStatus(quizErrors[0] ?? "ტესტის ვალიდაცია ვერ გავიდა.");
+      setIsSaving(false);
+      return;
+    }
 
     const response = await fetch("/api/admin/public-work", {
       method: "POST",
@@ -287,6 +320,49 @@ function EditableWorkInlineEditor({
           <EditorArea label="ანალიზი" value={analysis} onChange={setAnalysis} rows={6} />
 
           <BuilderSection title="ტესტის კითხვები" actionLabel="კითხვის დამატება" onAdd={addQuestion}>
+            <div className="space-y-3 rounded-[16px] border border-[color:var(--line)] bg-white/[0.035] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-white">ტესტების მასობრივი დამატება</p>
+                <label className="rounded-full border border-[color:var(--line)] px-3 py-1.5 text-xs text-[color:var(--gold-soft)] transition hover:bg-white/8">
+                  .txt ატვირთვა
+                  <input
+                    type="file"
+                    accept=".txt,text/plain"
+                    className="sr-only"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      const text = await file.text();
+                      applyImport(text);
+                    }}
+                  />
+                </label>
+              </div>
+              <textarea
+                value={importText}
+                onChange={(event) => applyImport(event.target.value)}
+                rows={10}
+                placeholder={`Question: კითხვა აქ
+A) პასუხი 1
+B) პასუხი 2
+C) პასუხი 3
+D) პასუხი 4
+Correct: B`}
+                className="w-full rounded-[14px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    applyImport("");
+                  }}
+                  className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8"
+                >
+                  გასუფთავება
+                </button>
+              </div>
+              {importStatus ? <p className={`text-sm ${importStatus.includes("წარმატებით") ? "text-[color:var(--success)]" : "text-[color:var(--danger)]"}`}>{importStatus}</p> : null}
+            </div>
             {quizQuestions.length > 0 ? (
               quizQuestions.map((question, index) => (
                 <div key={question.id ?? index} className="space-y-3 rounded-[16px] border border-[color:var(--line)] bg-white/[0.035] p-4">
@@ -335,7 +411,7 @@ function EditableWorkInlineEditor({
                               )
                             }
                           />
-                          <span className="text-xs text-[color:var(--muted)]">სწორი პასუხი</span>
+                          <span className="text-xs text-[color:var(--muted)]">{`პასუხი ${optionIndex + 1}`}</span>
                         </div>
                         <input
                           value={option.text}
@@ -366,6 +442,16 @@ function EditableWorkInlineEditor({
             ) : (
               <EmptyBuilderCopy text="ტესტი ჯერ არ არის დამატებული." />
             )}
+            {hasQuizErrors ? (
+              <div className="rounded-[14px] border border-[rgba(255,156,140,0.24)] bg-[rgba(255,156,140,0.08)] px-4 py-3">
+                <p className="text-sm font-medium text-[color:var(--danger)]">ტესტის ვალიდაცია ვერ გავიდა</p>
+                <div className="mt-2 space-y-1">
+                  {quizErrors.map((error) => (
+                    <p key={error} className="text-sm text-[color:var(--danger)]">{error}</p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </BuilderSection>
 
           <SaveRow isSaving={isSaving} onSave={save} onCancel={() => setIsOpen(false)} />
@@ -373,34 +459,6 @@ function EditableWorkInlineEditor({
       ) : null}
     </div>
   );
-}
-
-function normalizeQuestion(question: QuizQuestion): QuizQuestion {
-  return {
-    id: question.id ?? crypto.randomUUID(),
-    question: question.question ?? "",
-    options:
-      question.options?.length === 4
-        ? question.options
-        : createDefaultOptions(),
-  };
-}
-
-function createEmptyQuestion(index: number): QuizQuestion {
-  return {
-    id: crypto.randomUUID(),
-    question: `კითხვა ${index}`,
-    options: createDefaultOptions(),
-  };
-}
-
-function createDefaultOptions() {
-  return [
-    { id: "a", text: "", isCorrect: true },
-    { id: "b", text: "", isCorrect: false },
-    { id: "c", text: "", isCorrect: false },
-    { id: "d", text: "", isCorrect: false },
-  ];
 }
 
 function moveItem<T>(items: T[], index: number, direction: -1 | 1) {

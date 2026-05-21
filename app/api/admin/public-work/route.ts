@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
+import { validateQuestions } from "@/src/lib/quiz-editor";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { createClient } from "@/src/lib/supabase/server";
 
@@ -46,7 +47,8 @@ function normalizeQuizData(value: unknown) {
         options,
       };
     })
-    .filter((question) => question.id && question.question && question.options.length === 4 && question.options.some((option) => option.isCorrect));
+    .filter((question) => question.id && question.question && question.options.length === 4)
+    .filter((question) => validateQuestions([question]).length === 0);
 }
 
 function toGeorgianSupabaseError(message: string) {

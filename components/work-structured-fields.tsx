@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { QuizQuestion, SummaryChapter } from "@/src/lib/content";
+import { createEmptyQuestion, normalizeQuestion, parseBulkQuizImport, validateQuestions } from "@/src/lib/quiz-editor";
 
 export function WorkStructuredFields({
   chapterFieldName,
@@ -18,9 +19,31 @@ export function WorkStructuredFields({
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialQuestions.map(normalizeQuestion));
   const [importText, setImportText] = useState("");
   const [importStatus, setImportStatus] = useState("");
+  const [, startTransition] = useTransition();
   const quizErrors = useMemo(() => validateQuestions(questions), [questions]);
   const hasQuizErrors = quizErrors.length > 0;
   const sanitizedQuestions = hasQuizErrors ? [] : questions;
+
+  function applyImport(nextValue: string) {
+    setImportText(nextValue);
+
+    const value = nextValue.trim();
+    if (!value) {
+      setImportStatus("");
+      return;
+    }
+
+    const result = parseBulkQuizImport(value);
+    if (!result.ok) {
+      setImportStatus(result.error);
+      return;
+    }
+
+    setImportStatus(`${result.questions.length} კითხვა წარმატებით ჩაიტვირთა.`);
+    startTransition(() => {
+      setQuestions(result.questions);
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -72,20 +95,20 @@ export function WorkStructuredFields({
                 type="file"
                 accept=".txt,text/plain"
                 className="sr-only"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  const text = await file.text();
-                  setImportText(text);
-                }}
-              />
-            </label>
-          </div>
-          <textarea
-            value={importText}
-            onChange={(event) => setImportText(event.target.value)}
-            rows={10}
-            placeholder={`Question: კითხვა აქ
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      const text = await file.text();
+                      applyImport(text);
+                    }}
+                  />
+                </label>
+              </div>
+              <textarea
+                value={importText}
+                onChange={(event) => applyImport(event.target.value)}
+                rows={10}
+                placeholder={`Question: კითხვა აქ
 A) პასუხი 1
 B) პასუხი 2
 C) პასუხი 3
@@ -97,23 +120,7 @@ Correct: B`}
             <button
               type="button"
               onClick={() => {
-                const result = parseBulkQuizImport(importText);
-                if (!result.ok) {
-                  setImportStatus(result.error);
-                  return;
-                }
-                setQuestions(result.questions);
-                setImportStatus(`${result.questions.length} კითხვა წარმატებით ჩაიტვირთა.`);
-              }}
-              className="rounded-full border border-[rgba(244,177,93,0.24)] bg-[rgba(244,177,93,0.12)] px-4 py-2 text-sm text-[color:var(--gold-soft)] transition hover:bg-[rgba(244,177,93,0.18)]"
-            >
-              იმპორტი და გადახედვა
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setImportText("");
-                setImportStatus("");
+                applyImport("");
               }}
               className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8"
             >
@@ -143,9 +150,6 @@ Correct: B`}
                 />
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">სწორი პასუხი</p>
-                </div>
                 {question.options?.map((option, optionIndex) => (
                   <label key={option.id} className="rounded-[14px] border border-[color:var(--line)] bg-white/[0.04] p-3">
                     <div className="flex items-center gap-2">
@@ -169,7 +173,7 @@ Correct: B`}
                           )
                         }
                       />
-                      <span className="text-xs text-[color:var(--muted)]">{`ვარიანტი ${optionIndex + 1}`}</span>
+                      <span className="text-xs text-[color:var(--muted)]">{`პასუხი ${optionIndex + 1}`}</span>
                     </div>
                     <input
                       value={option.text}
@@ -211,113 +215,6 @@ Correct: B`}
       </BuilderSection>
     </div>
   );
-}
-
-function normalizeQuestion(question: QuizQuestion): QuizQuestion {
-  return {
-    id: question.id ?? crypto.randomUUID(),
-    question: question.question ?? "",
-    options: question.options?.length === 4 ? question.options : createDefaultOptions(),
-  };
-}
-
-function createEmptyQuestion(index: number): QuizQuestion {
-  return {
-    id: crypto.randomUUID(),
-    question: `კითხვა ${index}`,
-    options: createDefaultOptions(),
-  };
-}
-
-function createDefaultOptions() {
-  return [
-    { id: "a", text: "", isCorrect: false },
-    { id: "b", text: "", isCorrect: false },
-    { id: "c", text: "", isCorrect: false },
-    { id: "d", text: "", isCorrect: false },
-  ];
-}
-
-function validateQuestions(questions: QuizQuestion[]) {
-  const errors: string[] = [];
-
-  questions.forEach((question, index) => {
-    if (!question.question?.trim()) {
-      errors.push(`კითხვა ${index + 1}: შეკითხვა სავალდებულოა.`);
-    }
-
-    const options = question.options ?? [];
-    if (options.length !== 4) {
-      errors.push(`კითხვა ${index + 1}: ზუსტად 4 პასუხი უნდა ჰქონდეს.`);
-      return;
-    }
-
-    options.forEach((option, optionIndex) => {
-      if (!option.text.trim()) {
-        errors.push(`კითხვა ${index + 1}: პასუხი ${optionIndex + 1} სავალდებულოა.`);
-      }
-    });
-
-    const correctCount = options.filter((option) => option.isCorrect).length;
-    if (correctCount !== 1) {
-      errors.push(`კითხვა ${index + 1}: უნდა იყოს მონიშნული ზუსტად 1 სწორი პასუხი.`);
-    }
-  });
-
-  return errors;
-}
-
-function parseBulkQuizImport(value: string):
-  | { ok: true; questions: QuizQuestion[] }
-  | { ok: false; error: string } {
-  const blocks = value
-    .split(/\n\s*\n/g)
-    .map((block) => block.trim())
-    .filter(Boolean);
-
-  if (blocks.length === 0) {
-    return { ok: false, error: "იმპორტისთვის ტექსტი ცარიელია." };
-  }
-
-  const questions: QuizQuestion[] = [];
-
-  for (const [index, block] of blocks.entries()) {
-    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-    const questionLine = lines.find((line) => /^Question:/i.test(line));
-    const answerLines = ["A", "B", "C", "D"].map((letter) => lines.find((line) => new RegExp(`^${letter}\\)`, "i").test(line)));
-    const correctLine = lines.find((line) => /^Correct:/i.test(line));
-
-    if (!questionLine || answerLines.some((line) => !line) || !correctLine) {
-      return { ok: false, error: `ბლოკი ${index + 1} არასწორი ფორმატისაა.` };
-    }
-
-    const questionText = questionLine.replace(/^Question:\s*/i, "").trim();
-    const correctLetter = correctLine.replace(/^Correct:\s*/i, "").trim().toUpperCase();
-
-    if (!["A", "B", "C", "D"].includes(correctLetter)) {
-      return { ok: false, error: `ბლოკი ${index + 1}: Correct უნდა იყოს A, B, C ან D.` };
-    }
-
-    questions.push({
-      id: crypto.randomUUID(),
-      question: questionText,
-      options: answerLines.map((line, optionIndex) => {
-        const letter = ["A", "B", "C", "D"][optionIndex];
-        return {
-          id: letter.toLowerCase(),
-          text: (line ?? "").replace(new RegExp(`^${letter}\\)\\s*`, "i"), "").trim(),
-          isCorrect: letter === correctLetter,
-        };
-      }),
-    });
-  }
-
-  const errors = validateQuestions(questions);
-  if (errors.length > 0) {
-    return { ok: false, error: errors[0] };
-  }
-
-  return { ok: true, questions };
 }
 
 function moveItem<T>(items: T[], index: number, direction: -1 | 1) {

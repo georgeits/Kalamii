@@ -124,9 +124,9 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
     () =>
       questions
         .filter((question) => question.question?.trim() && question.options?.length === 4)
-        .map((question) => ({
+        .map((question, index) => ({
           ...question,
-          options: shuffleArray(question.options ?? [], attempt),
+          options: shuffleArray(question.options ?? [], `${question.id ?? index}-${attempt}`),
         })),
     [questions, attempt],
   );
@@ -226,15 +226,24 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
   );
 }
 
-function shuffleArray<T>(items: T[], seed: number) {
+function shuffleArray<T>(items: T[], seed: string) {
   const clone = [...items];
-  let state = seed + clone.length * 17 + 7;
+  let state = hashSeed(seed) + clone.length * 17 + 7;
   for (let index = clone.length - 1; index > 0; index -= 1) {
     state = (state * 1664525 + 1013904223) % 4294967296;
     const swapIndex = Math.floor((state / 4294967296) * (index + 1));
     [clone[index], clone[swapIndex]] = [clone[swapIndex], clone[index]];
   }
   return clone;
+}
+
+function hashSeed(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 function EmptyCopy({ text }: { text: string }) {

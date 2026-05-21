@@ -1,7 +1,7 @@
-import type { workProfiles } from "@/data/library";
 import { EmptyState, GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
+import type { getWorkDetail } from "@/src/lib/content";
 
-type WorkDetail = (typeof workProfiles)[number];
+type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
 
 export function WorkDetailPage({ work }: { work: WorkDetail }) {
   return (

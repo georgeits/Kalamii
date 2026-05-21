@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { workProfiles } from "@/data/library";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
+import type { getWorkProfiles } from "@/src/lib/content";
 
-export function WorksPage() {
+type WorkProfiles = Awaited<ReturnType<typeof getWorkProfiles>>;
+
+export function WorksPage({ works }: { works: WorkProfiles }) {
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
@@ -11,7 +13,7 @@ export function WorksPage() {
         description="თითოეულ ტექსტს აქვს ჟანრი, ავტორი, მოკლე შეჯამება და საგამოცდო თემები. პირადი სტატუსი დაემატება მომხმარებლის აქტივობის შემდეგ."
       />
       <div className="grid gap-4 xl:grid-cols-2">
-        {workProfiles.map((work) => (
+        {works.map((work) => (
           <Link key={work.slug} href={`/works/${work.slug}`}>
             <GlassCard className="h-full p-5 transition hover:-translate-y-1">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

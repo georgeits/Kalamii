@@ -3,13 +3,17 @@ import type { ReactNode } from "react";
 import { navigationItems } from "@/data/navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { PremiumButton, SearchBar } from "@/components/ui";
+import { getCurrentProfile } from "@/src/lib/content";
 
 type AppShellProps = {
   children: ReactNode;
   currentPath: string;
 };
 
-export function AppShell({ children, currentPath }: AppShellProps) {
+export async function AppShell({ children, currentPath }: AppShellProps) {
+  const profile = await getCurrentProfile();
+  const visibleNavigation = navigationItems.filter((item) => item.href !== "/admin" || profile?.role === "admin");
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="ambient ambient-one" />
@@ -18,7 +22,7 @@ export function AppShell({ children, currentPath }: AppShellProps) {
         <aside className="sidebar-shell sticky top-3 hidden h-[calc(100vh-1.5rem)] w-[286px] shrink-0 overflow-hidden rounded-[24px] p-4 lg:flex lg:flex-col">
           <BrandBlock />
           <nav className="mt-7 flex flex-1 flex-col gap-1.5">
-            {navigationItems.map((item, index) => {
+            {visibleNavigation.map((item, index) => {
               const isActive =
                 currentPath === item.href ||
                 (item.href !== "/" && currentPath.startsWith(item.href.split("#")[0]));
@@ -71,7 +75,7 @@ export function AppShell({ children, currentPath }: AppShellProps) {
 
           <div className="lg:hidden">
             <nav className="mb-5 flex gap-2 overflow-x-auto pb-1">
-              {navigationItems.slice(0, 8).map((item) => {
+              {visibleNavigation.slice(0, 8).map((item) => {
                 const isActive =
                   currentPath === item.href ||
                   (item.href !== "/" && currentPath.startsWith(item.href.split("#")[0]));

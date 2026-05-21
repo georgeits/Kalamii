@@ -5,20 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/src/lib/supabase/client";
 
-type AuthMode = "login" | "register";
-
-type AuthFormProps = {
-  mode: AuthMode;
-};
-
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const isRegister = mode === "register";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,14 +31,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/dashboard`;
-      const result = isRegister
-        ? await supabase.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: redirectTo },
-          })
-        : await supabase.auth.signInWithPassword({ email, password });
+      const result = await supabase.auth.signInWithPassword({ email, password });
 
       if (result.error) {
         setErrorMessage(getAuthErrorMessage(result.error.message));
@@ -82,7 +68,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          autoComplete={isRegister ? "new-password" : "current-password"}
+          autoComplete="current-password"
           placeholder="მინიმუმ 6 სიმბოლო"
           className="mt-2 h-12 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition placeholder:text-[color:var(--muted)] focus:border-[rgba(244,177,93,0.45)]"
         />
@@ -99,13 +85,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         disabled={isLoading}
         className="premium-button inline-flex h-12 w-full items-center justify-center rounded-full px-5 text-sm font-bold text-[#160f08] transition disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {isLoading ? "იტვირთება..." : isRegister ? "რეგისტრაცია" : "ავტორიზაცია"}
+        {isLoading ? "იტვირთება..." : "ავტორიზაცია"}
       </button>
 
       <p className="text-center text-sm text-[color:var(--muted)]">
-        {isRegister ? "უკვე გაქვთ ანგარიში?" : "ჯერ არ გაქვთ ანგარიში?"}{" "}
-        <Link href={isRegister ? "/login" : "/register"} className="text-[color:var(--gold-soft)] transition hover:text-white">
-          {isRegister ? "ავტორიზაცია" : "რეგისტრაცია"}
+        ჯერ არ გაქვთ ანგარიში?{" "}
+        <Link href="/register" className="text-[color:var(--gold-soft)] transition hover:text-white">
+          რეგისტრაცია
         </Link>
       </p>
     </form>

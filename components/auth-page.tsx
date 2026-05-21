@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth-form";
+import { RegisterForm } from "@/components/register-form";
 
 type AuthPageProps = {
   mode: "login" | "register";
@@ -38,7 +39,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                 : "შედით ანგარიშში, რომ გახსნათ პირადი სამუშაო სივრცე."}
             </p>
             <Suspense fallback={<AuthFormFallback />}>
-              <AuthForm mode={mode} />
+              {isRegister ? <RegisterForm /> : <AuthForm />}
             </Suspense>
           </div>
         </section>

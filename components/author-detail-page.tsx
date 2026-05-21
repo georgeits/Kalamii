@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { authorsWithWorks } from "@/data/library";
 import { GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
+import type { getAuthorDetail } from "@/src/lib/content";
 
-type AuthorDetail = (typeof authorsWithWorks)[number];
+type AuthorDetail = NonNullable<Awaited<ReturnType<typeof getAuthorDetail>>>;
 
 export function AuthorDetailPage({ author }: { author: AuthorDetail }) {
   return (

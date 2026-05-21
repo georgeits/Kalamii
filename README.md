@@ -1,4 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Supabase setup
+
+Create these environment variables before running the app:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ADMIN_EMAILS=you@example.com,other-admin@example.com
+```
+
+Then run the SQL in [supabase/migrations/20260521_auth_roles_and_content.sql](/Users/george/Kalamii/kartuli-exam-platform/supabase/migrations/20260521_auth_roles_and_content.sql) inside your Supabase project.
+
+Role assignment happens during registration:
+
+- Emails listed in `ADMIN_EMAILS` receive the `admin` role.
+- All other emails receive the `user` role.
+- Only `admin` users can open `/admin` or write to `authors` and `works`.
+
+Public author and work pages read from the live Supabase tables, so admin edits are reflected immediately across the site.
 
 ## Getting Started
 

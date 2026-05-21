@@ -1,10 +1,13 @@
 import { AppShell } from "@/components/app-shell";
 import { AuthorsPage } from "@/components/authors-page";
+import { getAuthorsWithWorks } from "@/src/lib/content";
 
-export default function Authors() {
+export default async function Authors() {
+  const authors = await getAuthorsWithWorks();
+
   return (
     <AppShell currentPath="/authors">
-      <AuthorsPage />
+      <AuthorsPage authors={authors} />
     </AppShell>
   );
 }

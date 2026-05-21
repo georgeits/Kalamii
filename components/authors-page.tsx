@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { authorsWithWorks } from "@/data/library";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
+import type { getAuthorsWithWorks } from "@/src/lib/content";
 
-export function AuthorsPage() {
+type AuthorList = Awaited<ReturnType<typeof getAuthorsWithWorks>>;
+
+export function AuthorsPage({ authors }: { authors: AuthorList }) {
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
@@ -11,7 +13,7 @@ export function AuthorsPage() {
         description="ავტორები წარმოდგენილია ბიოგრაფიული მოკლე აღწერით, ლიტერატურული პერიოდით, მიმდინარეობით და პროგრამაში შესული ნაწარმოებებით."
       />
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {authorsWithWorks.map((author) => (
+        {authors.map((author) => (
           <Link key={author.slug} href={`/authors/${author.slug}`}>
             <GlassCard className="h-full p-5 transition hover:-translate-y-1">
               <div className="flex items-start gap-4">

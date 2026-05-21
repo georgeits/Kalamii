@@ -39,6 +39,24 @@ export function AuthForm() {
         return;
       }
 
+      const profileResponse = await fetch("/api/auth/register-profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: result.data.user.id,
+          full_name: result.data.user.user_metadata.full_name ?? null,
+          email: result.data.user.email ?? email.trim().toLowerCase(),
+        }),
+      });
+
+      if (!profileResponse.ok) {
+        const payload = (await profileResponse.json().catch(() => null)) as { error?: string } | null;
+        setErrorMessage(payload?.error ?? "პროფილის სინქრონიზაცია ვერ მოხერხდა.");
+        return;
+      }
+
       const redirectedFrom = searchParams.get("redirectedFrom");
       const { data: profileResult } = await supabase
         .from("profiles")

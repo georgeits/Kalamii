@@ -62,7 +62,8 @@ export function RegisterForm() {
       }
 
       if (!data.user) {
-        setErrorMessage("რეგისტრაცია ვერ დასრულდა: Supabase-მა მომხმარებელი არ დააბრუნა.");
+        router.replace("/login?registered=1");
+        router.refresh();
         return;
       }
 

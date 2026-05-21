@@ -89,19 +89,19 @@ function ChapterSection({ chapters }: { chapters: WorkDetail["summary_chapters"]
             <div className="mt-5 flex flex-wrap gap-3">
             {safeChapters.map((chapter, index) => {
               const isActive = chapter.id === activeChapter?.id;
+              const chapterLabel = chapter.title || `თავი ${index + 1}`;
               return (
                 <button
                   key={chapter.id}
                   type="button"
                   onClick={() => setActiveChapterId(chapter.id)}
-                  className={`rounded-[16px] border px-4 py-3 text-left text-sm transition ${
+                  className={`min-h-0 rounded-[14px] border px-3.5 py-2 text-left text-sm transition sm:px-4 ${
                     isActive
                       ? "border-[rgba(244,177,93,0.32)] bg-[rgba(244,177,93,0.12)] text-white"
-                      : "border-[color:var(--line)] bg-white/[0.035] text-[color:var(--muted)]"
+                      : "border-[color:var(--line)] bg-white/[0.035] text-[color:var(--muted)] hover:bg-white/[0.06] hover:text-white"
                   }`}
                 >
-                  <span className="block font-semibold">{chapter.title || `თავი ${index + 1}`}</span>
-                  <span className="mt-1 block text-xs opacity-80">{`თავი ${index + 1}`}</span>
+                  <span className="block font-semibold leading-5">{chapterLabel}</span>
                 </button>
               );
             })}

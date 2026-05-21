@@ -13,6 +13,11 @@ type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
 
 export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; isAdmin: boolean; userPlan: AccessLevel }) {
   const canAccess = isAdmin || hasAccessToLevel(userPlan, work.access_level);
+  const hasPlan = Boolean(work.plan?.trim());
+  const hasChapters = Boolean((work.summary_chapters ?? []).length);
+  const hasAnalysis = Boolean(work.analysis?.trim());
+  const hasQuiz = Boolean((work.quiz_data ?? []).length);
+
   return (
     <main className="space-y-6 pb-8">
       <GlassCard className="p-6 sm:p-8">
@@ -43,10 +48,10 @@ export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; 
 
       {canAccess ? (
         <>
-          <ContentSection title="1. გეგმა" body={work.plan} emptyText="გეგმა ჯერ არ არის დამატებული." />
-          <ChapterSection chapters={work.summary_chapters ?? []} />
-          <ContentSection title="3. ანალიზი" body={work.analysis} emptyText="ანალიზი ჯერ არ არის დამატებული." />
-          <QuizSection questions={work.quiz_data ?? []} />
+          {(isAdmin || hasPlan) ? <ContentSection title="გეგმა" body={work.plan} /> : null}
+          {(isAdmin || hasChapters) ? <ChapterSection chapters={work.summary_chapters ?? []} /> : null}
+          {(isAdmin || hasAnalysis) ? <ContentSection title="ანალიზი" body={work.analysis} /> : null}
+          {(isAdmin || hasQuiz) ? <QuizSection questions={work.quiz_data ?? []} /> : null}
         </>
       ) : (
         <LockedContent requiredLevel={work.access_level} />
@@ -58,11 +63,9 @@ export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; 
 function ContentSection({
   title,
   body,
-  emptyText,
 }: {
   title: string;
   body?: string | null;
-  emptyText: string;
 }) {
   return (
     <GlassCard className="p-6">
@@ -70,7 +73,7 @@ function ContentSection({
       {body?.trim() ? (
         <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)]">{body}</p>
       ) : (
-        <EmptyCopy text={emptyText} />
+        <EmptyCopy text="მასალა ჯერ არ არის დამატებული" />
       )}
     </GlassCard>
   );
@@ -83,7 +86,7 @@ function ChapterSection({ chapters }: { chapters: WorkDetail["summary_chapters"]
 
   return (
     <GlassCard className="p-6">
-      <h3 className="font-serif text-2xl text-white">2. შინაარსი</h3>
+      <h3 className="font-serif text-2xl text-white">შინაარსი</h3>
       {safeChapters.length > 0 ? (
           <>
             <div className="mt-5 flex flex-wrap gap-3">
@@ -112,7 +115,7 @@ function ChapterSection({ chapters }: { chapters: WorkDetail["summary_chapters"]
           </div>
         </>
       ) : (
-        <EmptyCopy text="შინაარსი ჯერ არ არის დამატებული." />
+        <EmptyCopy text="მასალა ჯერ არ არის დამატებული" />
       )}
     </GlassCard>
   );
@@ -160,9 +163,9 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="font-serif text-2xl text-white">4. ტესტი</h3>
+      <h3 className="font-serif text-2xl text-white">ტესტი</h3>
       {normalizedQuestions.length === 0 ? (
-        <EmptyCopy text="ტესტი ჯერ არ არის დამატებული." />
+        <EmptyCopy text="მასალა ჯერ არ არის დამატებული" />
       ) : finished ? (
         <div className="mt-5 space-y-4">
           <Surface className="p-5">

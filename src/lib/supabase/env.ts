@@ -1,15 +1,21 @@
 function cleanEnvValue(value: string | undefined, label: string) {
-  const normalized = value?.trim();
+  const normalized = value?.replace(/^['"]|['"]$/g, "").trim();
 
   if (!normalized) {
     throw new Error(`${label} is not configured.`);
   }
 
-  // Guard against accidentally concatenated env vars such as:
-  // "<jwt> NEXT_PUBLIC_SITE_URL=https://..."
-  const contaminatedIndex = normalized.indexOf(" NEXT_PUBLIC_");
-  if (contaminatedIndex >= 0) {
-    return normalized.slice(0, contaminatedIndex).trim();
+  const contaminationPatterns = [
+    /\s+NEXT_PUBLIC_[A-Z0-9_]+=.+$/u,
+    /\s+SUPABASE_[A-Z0-9_]+=.+$/u,
+    /\s+[A-Z0-9_]+=https?:\/\/.+$/u,
+  ];
+
+  for (const pattern of contaminationPatterns) {
+    const match = normalized.match(pattern);
+    if (match?.index !== undefined) {
+      return normalized.slice(0, match.index).trim();
+    }
   }
 
   return normalized;

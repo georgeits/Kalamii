@@ -2,6 +2,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
 
 type AdminAuthorImageInputProps = {
   authorId?: string;
@@ -15,10 +16,15 @@ export function AdminAuthorImageInput({ authorId, currentImageUrl, onUploaded }:
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl ?? "");
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const canUpload = Boolean(authorId) && !authorId?.startsWith("fallback-");
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!canUpload) {
+      setError(DEMO_RECORD_MESSAGE);
+      return;
+    }
 
     setError("");
     setPreviewUrl(URL.createObjectURL(file));
@@ -72,11 +78,16 @@ export function AdminAuthorImageInput({ authorId, currentImageUrl, onUploaded }:
             id={inputId}
             type="file"
             accept="image/*"
+            disabled={!canUpload || isUploading}
             onChange={handleFileChange}
-            className="block w-full text-sm text-[color:var(--muted)] file:mr-4 file:rounded-full file:border-0 file:bg-[rgba(244,177,93,0.18)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[color:var(--gold-soft)]"
+            className="block w-full text-sm text-[color:var(--muted)] file:mr-4 file:rounded-full file:border-0 file:bg-[rgba(244,177,93,0.18)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[color:var(--gold-soft)] disabled:cursor-not-allowed disabled:opacity-60"
           />
           <p className="mt-2 text-xs text-[color:var(--muted)]">
-            {isUploading ? "სურათი იტვირთება..." : "აირჩიეთ პორტრეტი. თუ ავტორი ახალია, ჯერ შეინახეთ და შემდეგ შეცვალეთ ფოტო."}
+            {!canUpload
+              ? "ფოტოს ატვირთვა ხელმისაწვდომი გახდება მას შემდეგ, რაც ავტორს ჯერ შექმნით ბაზაში."
+              : isUploading
+                ? "სურათი იტვირთება..."
+                : "აირჩიეთ პორტრეტი. თუ ავტორი ახალია, ჯერ შეინახეთ და შემდეგ შეცვალეთ ფოტო."}
           </p>
           {error ? <p className="mt-2 text-xs text-[color:var(--danger)]">{error}</p> : null}
         </div>

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AccessBadge } from "@/components/access-helpers";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor } from "@/components/public-inline-editors";
-import { EmptyState, GlassCard, Pill, SearchBar, SectionTitle } from "@/components/ui";
+import { EmptyState, GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { AccessLevel } from "@/src/lib/access";
 import type { getAuthorsWithWorks } from "@/src/lib/content";
 import { matchesSearch } from "@/src/lib/search";
@@ -13,18 +13,17 @@ import { matchesSearch } from "@/src/lib/search";
 type AuthorList = Awaited<ReturnType<typeof getAuthorsWithWorks>>;
 
 export function AuthorsPage({ authors, isAdmin, initialQuery = "", userPlan }: { authors: AuthorList; isAdmin: boolean; initialQuery?: string; userPlan: AccessLevel }) {
-  const [query, setQuery] = useState(initialQuery);
   const filteredAuthors = useMemo(
     () =>
       authors.filter((author) =>
-        matchesSearch(author.name, query) ||
-        matchesSearch(author.periodLabel, query) ||
-        matchesSearch(author.movement, query) ||
-        matchesSearch(author.biography, query) ||
-        author.themes.some((theme) => matchesSearch(theme, query)) ||
-        author.works.some((work) => matchesSearch(work.title, query) || matchesSearch(work.genreLabel, query)),
+        matchesSearch(author.name, initialQuery) ||
+        matchesSearch(author.periodLabel, initialQuery) ||
+        matchesSearch(author.movement, initialQuery) ||
+        matchesSearch(author.biography, initialQuery) ||
+        author.themes.some((theme) => matchesSearch(theme, initialQuery)) ||
+        author.works.some((work) => matchesSearch(work.title, initialQuery) || matchesSearch(work.genreLabel, initialQuery)),
       ),
-    [authors, query],
+    [authors, initialQuery],
   );
 
   return (
@@ -40,9 +39,6 @@ export function AuthorsPage({ authors, isAdmin, initialQuery = "", userPlan }: {
           description="გაუშვით Supabase seed ფაილი ან დაამატეთ პირველი ავტორი ადმინისტრირების პანელიდან."
         />
       ) : null}
-      <GlassCard className="p-4 sm:p-5">
-        <SearchBar placeholder="მოძებნე ავტორი, პერიოდი, მიმდინარეობა ან ნაწარმოები" value={query} onChange={setQuery} />
-      </GlassCard>
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {filteredAuthors.map((author) => {
           const authorPath = author.slug?.trim() || author.id;

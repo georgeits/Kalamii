@@ -11,7 +11,7 @@ export default async function Authors({
   const { q } = await searchParams;
 
   return (
-    <AppShell currentPath="/authors">
+    <AppShell currentPath="/authors" searchQuery={q ?? ""}>
       <AuthorsPage
         authors={authors}
         isAdmin={profile?.email?.toLowerCase() === ADMIN_EMAIL}

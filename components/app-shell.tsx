@@ -9,11 +9,13 @@ import { getCurrentProfile } from "@/src/lib/content";
 type AppShellProps = {
   children: ReactNode;
   currentPath: string;
+  searchQuery?: string;
 };
 
-export async function AppShell({ children, currentPath }: AppShellProps) {
+export async function AppShell({ children, currentPath, searchQuery = "" }: AppShellProps) {
   const profile = await getCurrentProfile();
   const visibleNavigation = navigationItems.filter((item) => item.href !== "/admin" || profile?.role === "admin");
+  const searchTargetPath = currentPath === "/authors" || currentPath === "/works" || currentPath === "/library" ? currentPath : "/library";
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -56,7 +58,7 @@ export async function AppShell({ children, currentPath }: AppShellProps) {
                 <BrandMark />
               </div>
               <div className="hidden min-w-0 flex-1 md:block">
-                <GlobalSearchForm />
+                <GlobalSearchForm initialValue={searchQuery} targetPath={searchTargetPath} />
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <Link
@@ -70,7 +72,7 @@ export async function AppShell({ children, currentPath }: AppShellProps) {
               </div>
             </div>
             <div className="mt-3 md:hidden">
-              <GlobalSearchForm />
+              <GlobalSearchForm initialValue={searchQuery} targetPath={searchTargetPath} />
             </div>
           </header>
 

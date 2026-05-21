@@ -4,14 +4,20 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { SearchBar } from "@/components/ui";
 
-export function GlobalSearchForm({ initialValue = "" }: { initialValue?: string }) {
+export function GlobalSearchForm({
+  initialValue = "",
+  targetPath = "/library",
+}: {
+  initialValue?: string;
+  targetPath?: string;
+}) {
   const router = useRouter();
   const [value, setValue] = useState(initialValue);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = value.trim();
-    router.push(query ? `/library?q=${encodeURIComponent(query)}` : "/library");
+    router.push(query ? `${targetPath}?q=${encodeURIComponent(query)}` : targetPath);
   }
 
   return (

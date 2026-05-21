@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthorPortrait } from "@/components/author-portrait";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { getAuthorsWithWorks } from "@/src/lib/content";
 
@@ -17,9 +18,7 @@ export function AuthorsPage({ authors }: { authors: AuthorList }) {
           <Link key={author.slug} href={`/authors/${author.slug}`}>
             <GlassCard className="h-full p-5 transition hover:-translate-y-1">
               <div className="flex items-start gap-4">
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[20px] border border-[color:var(--line)] bg-white/[0.045] font-serif text-2xl text-[color:var(--gold-soft)]">
-                  {author.name.slice(0, 1)}
-                </div>
+                <AuthorPortrait name={author.name} imageUrl={author.image_url} className="h-16 w-16 shrink-0 rounded-[20px]" />
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold text-white">{author.name}</h3>
                   <p className="mt-1 text-xs text-[color:var(--muted)]">{author.periodLabel} • {author.movement}</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthorPortrait } from "@/components/author-portrait";
 import { GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
 import type { getAuthorDetail } from "@/src/lib/content";
 
@@ -9,9 +10,7 @@ export function AuthorDetailPage({ author }: { author: AuthorDetail }) {
     <main className="space-y-6 pb-8">
       <GlassCard className="p-6 sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-          <div className="grid aspect-[4/5] place-items-center rounded-[24px] border border-[color:var(--line)] bg-white/[0.045] font-serif text-7xl text-[color:var(--gold-soft)]">
-            {author.name.slice(0, 1)}
-          </div>
+          <AuthorPortrait name={author.name} imageUrl={author.image_url} className="aspect-[4/5]" large />
           <SectionTitle eyebrow={`${author.periodLabel} • ${author.movement}`} title={author.name} description={author.biography} />
         </div>
       </GlassCard>

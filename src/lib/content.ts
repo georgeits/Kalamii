@@ -21,6 +21,7 @@ export type AuthorRecord = {
   movement: string;
   biography: string;
   themes: string[];
+  image_url?: string | null;
   access_level: AccessLevel;
   created_at?: string;
   updated_at?: string;
@@ -58,9 +59,22 @@ export type StudyMaterialRecord = {
   description: string;
   material_type: string;
   url: string;
+  body?: string | null;
   author_id: string | null;
   work_id: string | null;
   access_level: AccessLevel;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type WorkContentRecord = {
+  id: string;
+  work_id: string;
+  study_material_body: string | null;
+  plan_body: string | null;
+  summary_body: string | null;
+  analysis_body: string | null;
+  quiz_questions: { question: string }[];
   created_at?: string;
   updated_at?: string;
 };
@@ -83,6 +97,7 @@ function fallbackAuthorRows(): AuthorRecord[] {
     movement: author.movement,
     biography: author.biography,
     themes: author.themes,
+    image_url: null,
     access_level: "free",
   }));
 }
@@ -210,6 +225,17 @@ export async function getStudyMaterials() {
   return data as MaterialWithRelations[];
 }
 
+export async function getWorkContents() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("work_contents").select("*").order("created_at");
+
+  if (error || !data) {
+    return [] as WorkContentRecord[];
+  }
+
+  return data as WorkContentRecord[];
+}
+
 export async function getAuthorsWithWorks() {
   const [authors, works] = await Promise.all([getAuthors(), getWorks()]);
 
@@ -256,12 +282,14 @@ export async function getWorkProfiles() {
 }
 
 export async function getWorkDetail(slug: string) {
-  const [works, summaries, materials] = await Promise.all([getWorks(), getSummaries(), getStudyMaterials()]);
+  const [works, summaries, materials, contents] = await Promise.all([getWorks(), getSummaries(), getStudyMaterials(), getWorkContents()]);
   const work = works.find((item) => item.slug === slug);
 
   if (!work) {
     return null;
   }
+
+  const content = contents.find((item) => item.work_id === work.id) ?? null;
 
   return {
     ...work,
@@ -273,6 +301,7 @@ export async function getWorkDetail(slug: string) {
     accessLevelLabel: getAccessLevelLabel(work.access_level),
     summaries: summaries.filter((summary) => summary.work_id === work.id),
     materials: materials.filter((material) => material.work?.id === work.id || material.work_id === work.id),
+    content,
   };
 }
 

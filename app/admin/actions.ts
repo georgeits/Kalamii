@@ -49,6 +49,7 @@ export async function createAuthorAction(formData: FormData) {
     movement: requiredText(formData, "movement"),
     biography: requiredText(formData, "biography"),
     themes: parseList(formData.get("themes")),
+    image_url: requiredText(formData, "image_url") || null,
     access_level: requiredText(formData, "access_level") || "free",
   });
 
@@ -70,6 +71,7 @@ export async function updateAuthorAction(formData: FormData) {
       movement: requiredText(formData, "movement"),
       biography: requiredText(formData, "biography"),
       themes: parseList(formData.get("themes")),
+      image_url: requiredText(formData, "image_url") || null,
       access_level: requiredText(formData, "access_level") || "free",
     })
     .eq("id", id);
@@ -183,6 +185,7 @@ export async function createStudyMaterialAction(formData: FormData) {
   await supabase.from("study_materials").insert({
     title: requiredText(formData, "title"),
     description: requiredText(formData, "description"),
+    body: requiredText(formData, "body"),
     material_type: requiredText(formData, "material_type"),
     url: requiredText(formData, "url"),
     author_id: requiredText(formData, "author_id") || null,
@@ -202,6 +205,7 @@ export async function updateStudyMaterialAction(formData: FormData) {
     .update({
       title: requiredText(formData, "title"),
       description: requiredText(formData, "description"),
+      body: requiredText(formData, "body"),
       material_type: requiredText(formData, "material_type"),
       url: requiredText(formData, "url"),
       author_id: requiredText(formData, "author_id") || null,
@@ -217,5 +221,30 @@ export async function deleteStudyMaterialAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
   await supabase.from("study_materials").delete().eq("id", requiredText(formData, "id"));
+  revalidateContentRoutes();
+}
+
+function parseQuizQuestions(value: FormDataEntryValue | null) {
+  return String(value ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((question) => ({ question }));
+}
+
+export async function upsertWorkContentAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const workId = requiredText(formData, "work_id");
+
+  await supabase.from("work_contents").upsert({
+    work_id: workId,
+    study_material_body: requiredText(formData, "study_material_body") || null,
+    plan_body: requiredText(formData, "plan_body") || null,
+    summary_body: requiredText(formData, "summary_body") || null,
+    analysis_body: requiredText(formData, "analysis_body") || null,
+    quiz_questions: parseQuizQuestions(formData.get("quiz_questions")),
+  }, { onConflict: "work_id" });
+
   revalidateContentRoutes();
 }

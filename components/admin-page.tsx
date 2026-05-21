@@ -1,22 +1,21 @@
 import {
   createAuthorAction,
   createStudyMaterialAction,
-  createSummaryAction,
   createWorkAction,
   deleteAuthorAction,
   deleteStudyMaterialAction,
-  deleteSummaryAction,
   deleteWorkAction,
   updateAuthorAction,
   updateStudyMaterialAction,
-  updateSummaryAction,
   updateWorkAction,
+  upsertWorkContentAction,
 } from "@/app/admin/actions";
+import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type {
   AuthorRecord,
   StudyMaterialRecord,
-  SummaryRecord,
+  WorkContentRecord,
   WorkRecord,
 } from "@/src/lib/content";
 
@@ -46,8 +45,8 @@ type MaterialWithRelations = StudyMaterialRecord & {
 type AdminPageProps = {
   authors: AuthorRecord[];
   works: WorkWithAuthorName[];
-  summaries: SummaryRecord[];
   studyMaterials: MaterialWithRelations[];
+  workContents: WorkContentRecord[];
   authorPeriodOptions: Option[];
   genreOptions: Option[];
   accessLevelOptions: readonly Option[];
@@ -57,8 +56,8 @@ type AdminPageProps = {
 export function AdminPage({
   authors,
   works,
-  summaries,
   studyMaterials,
+  workContents,
   authorPeriodOptions,
   genreOptions,
   accessLevelOptions,
@@ -69,7 +68,7 @@ export function AdminPage({
       <SectionTitle
         eyebrow="ადმინის პანელი"
         title="ცოცხალი ბაზის მართვა"
-        description="აქედან დამატებული ან შეცვლილი ავტორები, ნაწარმოებები, შეჯამებები და სასწავლო მასალები დაუყოვნებლივ აისახება საჯარო პლატფორმაზე."
+        description="ავტორის ფოტოები, ნაწარმოებების ტექსტური სექციები და მასალები პირდაპირ ცოცხალ Supabase მონაცემებში ინახება."
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -93,31 +92,9 @@ export function AdminPage({
             submitLabel="ნაწარმოების დამატება"
           />
         </GlassCard>
-
-        <GlassCard className="p-6">
-          <Header title="ახალი შეჯამება" tone="success" label="შეჯამება" />
-          <AdminSummaryForm
-            action={createSummaryAction}
-            works={works}
-            accessLevelOptions={accessLevelOptions}
-            submitLabel="შეჯამების დამატება"
-          />
-        </GlassCard>
-
-        <GlassCard className="p-6">
-          <Header title="ახალი სასწავლო მასალა" tone="rose" label="მასალა" />
-          <AdminStudyMaterialForm
-            action={createStudyMaterialAction}
-            authors={authors}
-            works={works}
-            accessLevelOptions={accessLevelOptions}
-            materialTypeOptions={materialTypeOptions}
-            submitLabel="მასალის დამატება"
-          />
-        </GlassCard>
       </div>
 
-      <EditableSection title="ავტორები" description="ბიოგრაფიები, თემები და წვდომის დონეები.">
+      <EditableSection title="ავტორები" description="ბიოგრაფიები, ფოტოები და საჯარო ბარათები.">
         {authors.map((author) => (
           <GlassCard key={author.id} className="p-5">
             <AdminAuthorForm
@@ -132,7 +109,7 @@ export function AdminPage({
         ))}
       </EditableSection>
 
-      <EditableSection title="ნაწარმოებები" description="შეჯამება, თემები, რჩევები და ფასიანი წვდომა.">
+      <EditableSection title="ნაწარმოებები" description="სათაური, ჟანრი და მოკლე აღწერა.">
         {works.map((work) => (
           <GlassCard key={work.id} className="p-5">
             <AdminWorkForm
@@ -148,22 +125,28 @@ export function AdminPage({
         ))}
       </EditableSection>
 
-      <EditableSection title="შეჯამებები" description="საჯარო დეტალური კონტენტი ნაწარმოებების გვერდებისთვის.">
-        {summaries.map((summary) => (
-          <GlassCard key={summary.id} className="p-5">
-            <AdminSummaryForm
-              action={updateSummaryAction}
-              summary={summary}
-              works={works}
-              accessLevelOptions={accessLevelOptions}
-              submitLabel="შენახვა"
+      <EditableSection title="ნაწარმოების შიგთავსი" description="სექციები გამოჩნდება სწორედ ამ მიმდევრობით: სასწავლო მასალა, გეგმა, შინაარსი, ანალიზი, ტესტი.">
+        {works.map((work) => (
+          <GlassCard key={`content-${work.id}`} className="p-5">
+            <WorkContentForm
+              work={work}
+              content={workContents.find((item) => item.work_id === work.id)}
             />
-            <DeleteForm action={deleteSummaryAction} id={summary.id} label="შეჯამების წაშლა" />
           </GlassCard>
         ))}
       </EditableSection>
 
-      <EditableSection title="სასწავლო მასალები" description="ბმულები, PDF-ები, გეგმები და დამატებითი მასალები.">
+      <EditableSection title="დამატებითი მასალები" description="ბმულები და დამატებითი ტექსტური აღწერები.">
+        <GlassCard className="p-5">
+          <AdminStudyMaterialForm
+            action={createStudyMaterialAction}
+            authors={authors}
+            works={works}
+            accessLevelOptions={accessLevelOptions}
+            materialTypeOptions={materialTypeOptions}
+            submitLabel="მასალის დამატება"
+          />
+        </GlassCard>
         {studyMaterials.map((material) => (
           <GlassCard key={material.id} className="p-5">
             <AdminStudyMaterialForm
@@ -183,15 +166,7 @@ export function AdminPage({
   );
 }
 
-function Header({
-  title,
-  label,
-  tone,
-}: {
-  title: string;
-  label: string;
-  tone: "gold" | "sky" | "success" | "rose";
-}) {
+function Header({ title, label, tone }: { title: string; label: string; tone: "gold" | "sky" | "rose" }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <h3 className="font-serif text-2xl text-white">{title}</h3>
@@ -200,39 +175,20 @@ function Header({
   );
 }
 
-function EditableSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
+function EditableSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
     <GlassCard className="p-6">
-      <SectionTitle eyebrow={title} title="რედაქტირება და წაშლა" description={description} compact />
+      <SectionTitle eyebrow={title} title="რედაქტირება" description={description} compact />
       <div className="mt-6 grid gap-4">{children}</div>
     </GlassCard>
   );
 }
 
-function DeleteForm({
-  action,
-  id,
-  label,
-}: {
-  action: (formData: FormData) => void | Promise<void>;
-  id: string;
-  label: string;
-}) {
+function DeleteForm({ action, id, label }: { action: (formData: FormData) => void | Promise<void>; id: string; label: string }) {
   return (
     <form action={action} className="mt-3">
       <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        className="rounded-full border border-[rgba(255,156,140,0.24)] px-4 py-2 text-sm text-[color:var(--danger)] transition hover:bg-[rgba(255,156,140,0.08)]"
-      >
+      <button type="submit" className="rounded-full border border-[rgba(255,156,140,0.24)] px-4 py-2 text-sm text-[color:var(--danger)] transition hover:bg-[rgba(255,156,140,0.08)]">
         {label}
       </button>
     </form>
@@ -259,15 +215,11 @@ function AdminAuthorForm({
         <Field label="სახელი" name="name" defaultValue={author?.name} />
         <Field label="Slug" name="slug" defaultValue={author?.slug} />
       </div>
+      <AdminAuthorImageInput authorId={author?.id} currentImageUrl={author?.image_url} />
       <div className="grid gap-3 md:grid-cols-3">
         <SelectField label="პერიოდი" name="period" defaultValue={author?.period} options={authorPeriodOptions} />
         <Field label="მიმდინარეობა" name="movement" defaultValue={author?.movement} />
-        <SelectField
-          label="წვდომა"
-          name="access_level"
-          defaultValue={author?.access_level ?? "free"}
-          options={accessLevelOptions}
-        />
+        <SelectField label="წვდომა" name="access_level" defaultValue={author?.access_level ?? "free"} options={accessLevelOptions} />
       </div>
       <TextAreaField label="ბიოგრაფია" name="biography" defaultValue={author?.biography} rows={5} />
       <Field label="თემები" name="themes" defaultValue={author?.themes.join(", ")} helper="მძიმით გამოყოფილი სია" />
@@ -299,65 +251,35 @@ function AdminWorkForm({
         <Field label="Slug" name="slug" defaultValue={work?.slug} />
       </div>
       <div className="grid gap-3 md:grid-cols-3">
-        <SelectField
-          label="ავტორი"
-          name="author_id"
-          defaultValue={work?.author_id}
-          options={authors.map((author) => ({ value: author.id, label: author.name }))}
-        />
+        <SelectField label="ავტორი" name="author_id" defaultValue={work?.author_id} options={authors.map((author) => ({ value: author.id, label: author.name }))} />
         <SelectField label="ჟანრი" name="genre" defaultValue={work?.genre} options={genreOptions} />
-        <SelectField
-          label="წვდომა"
-          name="access_level"
-          defaultValue={work?.access_level ?? "free"}
-          options={accessLevelOptions}
-        />
+        <SelectField label="წვდომა" name="access_level" defaultValue={work?.access_level ?? "free"} options={accessLevelOptions} />
       </div>
       <TextAreaField label="მოკლე შინაარსი" name="summary" defaultValue={work?.summary} rows={4} />
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="თემები" name="themes" defaultValue={work?.themes.join(", ")} helper="მძიმით გამოყოფილი სია" />
-        <Field label="პერსონაჟები" name="characters" defaultValue={work?.characters.join(", ")} helper="მძიმით გამოყოფილი სია" />
-        <Field label="სიმბოლოები" name="symbols" defaultValue={work?.symbols.join(", ")} helper="მძიმით გამოყოფილი სია" />
-        <Field label="საგამოცდო რჩევები" name="exam_tips" defaultValue={work?.exam_tips.join(", ")} helper="მძიმით გამოყოფილი სია" />
-      </div>
       <SubmitButton label={submitLabel} />
     </form>
   );
 }
 
-function AdminSummaryForm({
-  action,
-  summary,
-  works,
-  accessLevelOptions,
-  submitLabel,
-}: {
-  action: (formData: FormData) => void | Promise<void>;
-  summary?: SummaryRecord;
-  works: WorkWithAuthorName[];
-  accessLevelOptions: readonly Option[];
-  submitLabel: string;
-}) {
+function WorkContentForm({ work, content }: { work: WorkWithAuthorName; content?: WorkContentRecord }) {
+  const quizValue = content?.quiz_questions?.map((item) => item.question).join("\n") ?? "";
+
   return (
-    <form action={action} className="mt-5 space-y-3">
-      {summary ? <input type="hidden" name="id" value={summary.id} /> : null}
-      <div className="grid gap-3 md:grid-cols-2">
-        <SelectField
-          label="ნაწარმოები"
-          name="work_id"
-          defaultValue={summary?.work_id}
-          options={works.map((work) => ({ value: work.id, label: work.title }))}
-        />
-        <SelectField
-          label="წვდომა"
-          name="access_level"
-          defaultValue={summary?.access_level ?? "free"}
-          options={accessLevelOptions}
-        />
+    <form action={upsertWorkContentAction} className="space-y-3">
+      <input type="hidden" name="work_id" value={work.id} />
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="font-serif text-2xl text-white">{work.title}</h3>
+          <p className="mt-1 text-sm text-[color:var(--muted)]">{work.author?.name ?? "უცნობი ავტორი"}</p>
+        </div>
+        <Pill tone="gold">5 სექცია</Pill>
       </div>
-      <Field label="სათაური" name="title" defaultValue={summary?.title} />
-      <TextAreaField label="ტექსტი" name="body" defaultValue={summary?.body} rows={7} />
-      <SubmitButton label={submitLabel} />
+      <TextAreaField label="1. სასწავლო მასალა" name="study_material_body" defaultValue={content?.study_material_body ?? ""} rows={5} />
+      <TextAreaField label="2. გეგმა" name="plan_body" defaultValue={content?.plan_body ?? ""} rows={5} />
+      <TextAreaField label="3. შინაარსი" name="summary_body" defaultValue={content?.summary_body ?? ""} rows={5} />
+      <TextAreaField label="4. ანალიზი" name="analysis_body" defaultValue={content?.analysis_body ?? ""} rows={7} />
+      <TextAreaField label="5. ტესტის კითხვები" name="quiz_questions" defaultValue={quizValue} rows={6} helper="თითო კითხვა ახალ ხაზზე" />
+      <SubmitButton label="სექციების შენახვა" />
     </form>
   );
 }
@@ -380,38 +302,19 @@ function AdminStudyMaterialForm({
   submitLabel: string;
 }) {
   return (
-    <form action={action} className="mt-5 space-y-3">
+    <form action={action} className="space-y-3">
       {studyMaterial ? <input type="hidden" name="id" value={studyMaterial.id} /> : null}
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="სათაური" name="title" defaultValue={studyMaterial?.title} />
-        <SelectField
-          label="ტიპი"
-          name="material_type"
-          defaultValue={studyMaterial?.material_type}
-          options={materialTypeOptions}
-        />
+        <SelectField label="ტიპი" name="material_type" defaultValue={studyMaterial?.material_type} options={materialTypeOptions} />
       </div>
-      <TextAreaField label="აღწერა" name="description" defaultValue={studyMaterial?.description} rows={4} />
+      <TextAreaField label="აღწერა" name="description" defaultValue={studyMaterial?.description} rows={3} />
+      <TextAreaField label="მასალის ტექსტი" name="body" defaultValue={studyMaterial?.body ?? ""} rows={5} />
       <Field label="ბმული / URL" name="url" defaultValue={studyMaterial?.url} />
       <div className="grid gap-3 md:grid-cols-3">
-        <SelectField
-          label="ავტორი"
-          name="author_id"
-          defaultValue={studyMaterial?.author_id ?? ""}
-          options={[{ value: "", label: "არჩევითი" }, ...authors.map((author) => ({ value: author.id, label: author.name }))]}
-        />
-        <SelectField
-          label="ნაწარმოები"
-          name="work_id"
-          defaultValue={studyMaterial?.work_id ?? ""}
-          options={[{ value: "", label: "არჩევითი" }, ...works.map((work) => ({ value: work.id, label: work.title }))]}
-        />
-        <SelectField
-          label="წვდომა"
-          name="access_level"
-          defaultValue={studyMaterial?.access_level ?? "free"}
-          options={accessLevelOptions}
-        />
+        <SelectField label="ავტორი" name="author_id" defaultValue={studyMaterial?.author_id ?? ""} options={[{ value: "", label: "არჩევითი" }, ...authors.map((author) => ({ value: author.id, label: author.name }))]} />
+        <SelectField label="ნაწარმოები" name="work_id" defaultValue={studyMaterial?.work_id ?? ""} options={[{ value: "", label: "არჩევითი" }, ...works.map((work) => ({ value: work.id, label: work.title }))]} />
+        <SelectField label="წვდომა" name="access_level" defaultValue={studyMaterial?.access_level ?? "free"} options={accessLevelOptions} />
       </div>
       <SubmitButton label={submitLabel} />
     </form>
@@ -426,74 +329,31 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-function Field({
-  label,
-  name,
-  defaultValue,
-  helper,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  helper?: string;
-}) {
+function Field({ label, name, defaultValue, helper }: { label: string; name: string; defaultValue?: string; helper?: string }) {
   return (
     <label className="block">
       <span className="text-sm text-[color:var(--muted)]">{label}</span>
-      <input
-        type="text"
-        name={name}
-        defaultValue={defaultValue}
-        className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]"
-      />
+      <input type="text" name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
       {helper ? <p className="mt-2 text-xs text-[color:var(--muted)]">{helper}</p> : null}
     </label>
   );
 }
 
-function TextAreaField({
-  label,
-  name,
-  defaultValue,
-  rows,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  rows: number;
-}) {
+function TextAreaField({ label, name, defaultValue, rows, helper }: { label: string; name: string; defaultValue?: string; rows: number; helper?: string }) {
   return (
     <label className="block">
       <span className="text-sm text-[color:var(--muted)]">{label}</span>
-      <textarea
-        name={name}
-        defaultValue={defaultValue}
-        rows={rows}
-        className="mt-2 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]"
-      />
+      <textarea name={name} defaultValue={defaultValue} rows={rows} className="mt-2 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
+      {helper ? <p className="mt-2 text-xs text-[color:var(--muted)]">{helper}</p> : null}
     </label>
   );
 }
 
-function SelectField({
-  label,
-  name,
-  defaultValue,
-  options,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  options: readonly Option[];
-}) {
+function SelectField({ label, name, defaultValue, options }: { label: string; name: string; defaultValue?: string; options: readonly Option[] }) {
   return (
     <label className="block">
       <span className="text-sm text-[color:var(--muted)]">{label}</span>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]"
-      >
+      <select name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]">
         {options.map((option) => (
           <option key={`${name}-${option.value}`} value={option.value}>
             {option.label}

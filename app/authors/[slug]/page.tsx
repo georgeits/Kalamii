@@ -10,7 +10,11 @@ export default async function AuthorDetail({ params }: { params: Promise<{ slug:
 
   return (
     <AppShell currentPath="/authors">
-      <AuthorDetailPage author={author} isAdmin={profile?.email?.toLowerCase() === ADMIN_EMAIL} />
+      <AuthorDetailPage
+        author={author}
+        isAdmin={profile?.email?.toLowerCase() === ADMIN_EMAIL}
+        userPlan={profile?.subscription_plan ?? "free"}
+      />
     </AppShell>
   );
 }

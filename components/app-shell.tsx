@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { GlobalSearchForm } from "@/components/global-search-form";
 import { navigationItems } from "@/data/navigation";
 import { LogoutButton } from "@/components/logout-button";
-import { PremiumButton, SearchBar } from "@/components/ui";
+import { PremiumButton } from "@/components/ui";
 import { getCurrentProfile } from "@/src/lib/content";
 
 type AppShellProps = {
@@ -55,7 +56,7 @@ export async function AppShell({ children, currentPath }: AppShellProps) {
                 <BrandMark />
               </div>
               <div className="hidden min-w-0 flex-1 md:block">
-                <SearchBar placeholder="მოძებნე ავტორი, ნაწარმოები, ტერმინი ან ტესტი" value="" />
+                <GlobalSearchForm />
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <Link
@@ -69,7 +70,7 @@ export async function AppShell({ children, currentPath }: AppShellProps) {
               </div>
             </div>
             <div className="mt-3 md:hidden">
-              <SearchBar placeholder="ძებნა Kalami-ში" value="" />
+              <GlobalSearchForm />
             </div>
           </header>
 

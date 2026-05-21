@@ -10,7 +10,11 @@ export default async function WorkDetail({ params }: { params: Promise<{ slug: s
 
   return (
     <AppShell currentPath="/works">
-      <WorkDetailPage work={work} isAdmin={profile?.email?.toLowerCase() === ADMIN_EMAIL} />
+      <WorkDetailPage
+        work={work}
+        isAdmin={profile?.email?.toLowerCase() === ADMIN_EMAIL}
+        userPlan={profile?.subscription_plan ?? "free"}
+      />
     </AppShell>
   );
 }

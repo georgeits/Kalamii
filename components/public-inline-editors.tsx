@@ -9,7 +9,14 @@ export function AuthorInlineEditor({
   author,
   compact = false,
 }: {
-  author: { id: string; biography: string; image_url?: string | null };
+  author: {
+    id: string;
+    name: string;
+    period: string;
+    movement: string;
+    biography: string;
+    image_url?: string | null;
+  };
   compact?: boolean;
 }) {
   return <EditableAuthorInlineEditor author={author} compact={compact} />;
@@ -36,11 +43,21 @@ function EditableAuthorInlineEditor({
   author,
   compact,
 }: {
-  author: { id: string; biography: string; image_url?: string | null };
+  author: {
+    id: string;
+    name: string;
+    period: string;
+    movement: string;
+    biography: string;
+    image_url?: string | null;
+  };
   compact: boolean;
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [name, setName] = useState(author.name);
+  const [period, setPeriod] = useState(author.period);
+  const [movement, setMovement] = useState(author.movement);
   const [biography, setBiography] = useState(author.biography);
   const [imageUrl, setImageUrl] = useState(author.image_url ?? "");
   const [status, setStatus] = useState("");
@@ -54,6 +71,9 @@ function EditableAuthorInlineEditor({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: author.id,
+        name,
+        period,
+        movement,
         biography,
         image_url: imageUrl,
       }),
@@ -64,6 +84,9 @@ function EditableAuthorInlineEditor({
       if (process.env.NODE_ENV !== "production") {
         console.error("Author save failed", {
           authorId: author.id,
+          name,
+          period,
+          movement,
           biography,
           imageUrl,
           payload,
@@ -91,9 +114,23 @@ function EditableAuthorInlineEditor({
       {isOpen ? (
         <div className="mt-3 space-y-3 rounded-[18px] border border-[color:var(--line)] bg-white/[0.04] p-4">
           <AdminAuthorImageInput authorId={author.id} currentImageUrl={imageUrl} onUploaded={setImageUrl} />
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="block">
+              <span className="text-sm text-[color:var(--muted)]">სახელი</span>
+              <input value={name} onChange={(event) => setName(event.target.value)} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+            </label>
+            <label className="block">
+              <span className="text-sm text-[color:var(--muted)]">პერიოდი</span>
+              <input value={period} onChange={(event) => setPeriod(event.target.value)} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+            </label>
+            <label className="block">
+              <span className="text-sm text-[color:var(--muted)]">მიმდინარეობა</span>
+              <input value={movement} onChange={(event) => setMovement(event.target.value)} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+            </label>
+          </div>
           <label className="block">
             <span className="text-sm text-[color:var(--muted)]">ბიოგრაფია</span>
-            <textarea value={biography} onChange={(event) => setBiography(event.target.value)} rows={5} className="mt-2 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none" />
+            <textarea value={biography} onChange={(event) => setBiography(event.target.value)} rows={8} className="mt-2 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none" />
           </label>
           <SaveRow isSaving={isSaving} onSave={save} onCancel={() => setIsOpen(false)} />
         </div>

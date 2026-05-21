@@ -1,8 +1,8 @@
 import { genres, literaryPeriods } from "@/data/taxonomy";
+import { getAccessLevelLabel, type AccessLevel } from "@/src/lib/access";
 import { ADMIN_EMAIL, isAdminEmail } from "@/src/lib/auth";
+import { normalizeSearchValue } from "@/src/lib/search";
 import { createClient } from "@/src/lib/supabase/server";
-
-export type AccessLevel = "free" | "standard" | "premium";
 
 export type QuizQuestion = {
   id?: string;
@@ -25,6 +25,22 @@ export type ProfileRecord = {
   full_name: string | null;
   email: string;
   role: "admin" | "user";
+  subscription_plan: AccessLevel;
+  subscription_status: "active" | "expired" | "cancelled" | "none";
+  subscription_expires_at?: string | null;
+};
+
+export type SubscriptionRecord = {
+  id: string;
+  user_id: string;
+  email: string;
+  plan: AccessLevel;
+  status: "active" | "expired" | "cancelled";
+  starts_at: string;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  full_name?: string | null;
 };
 
 export type AuthorRecord = {
@@ -62,7 +78,7 @@ export type WorkRecord = {
 };
 
 type WorkWithAuthor = WorkRecord & {
-  author: Pick<AuthorRecord, "id" | "name" | "period" | "movement" | "image_url"> | null;
+  author: Pick<AuthorRecord, "id" | "name" | "period" | "movement" | "image_url" | "slug"> | null;
 };
 
 type CatalogData = {
@@ -70,25 +86,104 @@ type CatalogData = {
   works: WorkWithAuthor[];
 };
 
-async function loadCatalogData(): Promise<CatalogData> {
-  const supabase = await createClient();
-  const [{ data: authorsData, error: authorsError }, { data: worksData, error: worksError }] =
-    await Promise.all([
-      supabase.from("authors").select("*").order("name"),
-      supabase
-        .from("works")
-        .select("*, author:authors(id, name, period, movement, image_url)")
-        .order("title"),
-    ]);
+function isMissingColumnError(message: string, column: string) {
+  return message.toLowerCase().includes(`column ${column.toLowerCase()} does not exist`);
+}
 
-  if (authorsError || worksError) {
-    throw new Error(
-      `Supabase catalog load failed: ${authorsError?.message ?? worksError?.message ?? "unknown error"}`,
-    );
+async function fetchAuthors(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const fullResult = await supabase
+    .from("authors")
+    .select("id, slug, name, period, movement, biography, themes, image_url, access_level, created_at, updated_at")
+    .order("name");
+
+  if (!fullResult.error) {
+    return fullResult.data as AuthorRecord[];
   }
 
-  const authors = (authorsData ?? []) as AuthorRecord[];
-  const works = (worksData ?? []) as WorkWithAuthor[];
+  if (!isMissingColumnError(fullResult.error.message, "authors.image_url")) {
+    throw fullResult.error;
+  }
+
+  const fallbackResult = await supabase
+    .from("authors")
+    .select("id, slug, name, period, movement, biography, themes, access_level, created_at, updated_at")
+    .order("name");
+
+  if (fallbackResult.error) {
+    throw fallbackResult.error;
+  }
+
+  return (fallbackResult.data ?? []).map((author) => ({
+    ...author,
+    image_url: null,
+  })) as AuthorRecord[];
+}
+
+async function fetchWorks(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const fullResult = await supabase
+    .from("works")
+    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+    .order("title");
+
+  if (!fullResult.error) {
+    return normalizeWorks((fullResult.data ?? []) as Record<string, unknown>[]);
+  }
+
+  const fallbackColumns = [
+    "works.summary_chapters",
+    "works.plan",
+    "works.analysis",
+    "works.quiz_data",
+    "authors.image_url",
+  ];
+
+  if (!fallbackColumns.some((column) => isMissingColumnError(fullResult.error.message, column))) {
+    throw fullResult.error;
+  }
+
+  const fallbackResult = await supabase
+    .from("works")
+    .select("id, slug, title, author_id, genre, summary, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement)")
+    .order("title");
+
+  if (fallbackResult.error) {
+    throw fallbackResult.error;
+  }
+
+  return normalizeWorks((fallbackResult.data ?? []) as Record<string, unknown>[]).map((work) => ({
+    ...work,
+    summary_chapters: [],
+    plan: null,
+    analysis: null,
+    quiz_data: [],
+    author: work.author ? { ...work.author, image_url: null } : null,
+  }));
+}
+
+function normalizeWorks(rows: Record<string, unknown>[]) {
+  return rows.map((work) => {
+    const authorValue = work.author;
+    const authorRecord = Array.isArray(authorValue) ? authorValue[0] : authorValue;
+
+    return {
+      ...work,
+      author: authorRecord
+        ? {
+            id: String((authorRecord as Record<string, unknown>).id ?? ""),
+            slug: String((authorRecord as Record<string, unknown>).slug ?? ""),
+            name: String((authorRecord as Record<string, unknown>).name ?? ""),
+            period: String((authorRecord as Record<string, unknown>).period ?? "") as AuthorRecord["period"],
+            movement: String((authorRecord as Record<string, unknown>).movement ?? ""),
+            image_url: ((authorRecord as Record<string, unknown>).image_url as string | null | undefined) ?? null,
+          }
+        : null,
+    };
+  }) as WorkWithAuthor[];
+}
+
+async function loadCatalogData(): Promise<CatalogData> {
+  const supabase = await createClient();
+  const [authors, works] = await Promise.all([fetchAuthors(supabase), fetchWorks(supabase)]);
 
   return { authors, works };
 }
@@ -101,8 +196,40 @@ export function getAccessLevelOptions() {
   ] as const;
 }
 
-export function getAccessLevelLabel(accessLevel: AccessLevel) {
-  return getAccessLevelOptions().find((item) => item.value === accessLevel)?.label ?? accessLevel;
+function getSubscriptionState(subscription: {
+  plan: AccessLevel;
+  status: "active" | "expired" | "cancelled";
+  expires_at: string | null;
+} | null) {
+  if (!subscription) {
+    return {
+      plan: "free" as AccessLevel,
+      status: "none" as const,
+      expires_at: null,
+    };
+  }
+
+  if (subscription.status !== "active") {
+    return {
+      plan: "free" as AccessLevel,
+      status: subscription.status,
+      expires_at: subscription.expires_at,
+    };
+  }
+
+  if (subscription.expires_at && new Date(subscription.expires_at).getTime() < Date.now()) {
+    return {
+      plan: "free" as AccessLevel,
+      status: "expired" as const,
+      expires_at: subscription.expires_at,
+    };
+  }
+
+  return {
+    plan: subscription.plan,
+    status: subscription.status,
+    expires_at: subscription.expires_at,
+  };
 }
 
 export async function getCurrentProfile() {
@@ -120,11 +247,31 @@ export async function getCurrentProfile() {
     .select("id, full_name, email, role")
     .eq("id", user.id)
     .maybeSingle();
+  let subscription: { plan: AccessLevel; status: "active" | "expired" | "cancelled"; expires_at: string | null } | null = null;
+  try {
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("plan, status, expires_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    subscription = (data as typeof subscription) ?? null;
+  } catch {
+    subscription = null;
+  }
+
+  const subscriptionState = getSubscriptionState(
+    subscription,
+  );
 
   if (profile) {
     return {
       ...profile,
       role: profile.role === "admin" || isAdminEmail(profile.email) ? "admin" : "user",
+      subscription_plan: profile.role === "admin" || isAdminEmail(profile.email) ? "premium" : subscriptionState.plan,
+      subscription_status: profile.role === "admin" || isAdminEmail(profile.email) ? "active" : subscriptionState.status,
+      subscription_expires_at: subscriptionState.expires_at,
     } as ProfileRecord;
   }
 
@@ -133,7 +280,45 @@ export async function getCurrentProfile() {
     full_name: (user.user_metadata.full_name as string | undefined) ?? null,
     email: user.email ?? "",
     role: user.email && isAdminEmail(user.email) ? "admin" : "user",
+    subscription_plan: user.email && isAdminEmail(user.email) ? "premium" : subscriptionState.plan,
+    subscription_status: user.email && isAdminEmail(user.email) ? "active" : subscriptionState.status,
+    subscription_expires_at: subscriptionState.expires_at,
   } satisfies ProfileRecord;
+}
+
+export async function getSubscriptions() {
+  const supabase = await createClient();
+  const [{ data, error }, { data: profiles }] = await Promise.all([
+    supabase
+    .from("subscriptions")
+    .select("id, user_id, email, plan, status, starts_at, expires_at, created_at, updated_at")
+    .order("updated_at", { ascending: false }),
+    supabase.from("profiles").select("id, full_name, email"),
+  ]);
+
+  if (error) {
+    throw new Error(`Subscriptions query failed: ${error.message}`);
+  }
+
+  const profileMap = new Map(
+    ((profiles ?? []) as Array<{ id: string; full_name: string | null; email: string }>).map((item) => [
+      item.id,
+      item,
+    ]),
+  );
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+    id: String(item.id ?? ""),
+    user_id: String(item.user_id ?? ""),
+    email: String(item.email ?? ""),
+    plan: String(item.plan ?? "free") as AccessLevel,
+    status: String(item.status ?? "expired") as SubscriptionRecord["status"],
+    starts_at: String(item.starts_at ?? ""),
+    expires_at: (item.expires_at as string | null | undefined) ?? null,
+    created_at: String(item.created_at ?? ""),
+    updated_at: String(item.updated_at ?? ""),
+    full_name: profileMap.get(String(item.user_id ?? ""))?.full_name ?? null,
+  })) as SubscriptionRecord[];
 }
 
 export async function getAuthors() {
@@ -165,7 +350,17 @@ export async function getAuthorsWithWorks() {
 
 export async function getAuthorDetail(slug: string) {
   const authors = await getAuthorsWithWorks();
-  return authors.find((item) => item.slug === slug) ?? null;
+  const normalizedSlug = normalizeSearchValue(slug);
+  const author = authors.find((item) => normalizeSearchValue(item.slug) === normalizedSlug) ?? null;
+
+  if (!author && process.env.NODE_ENV !== "production") {
+    console.error("Author detail lookup failed", {
+      slug,
+      availableSlugs: authors.slice(0, 20).map((item) => item.slug),
+    });
+  }
+
+  return author;
 }
 
 export async function getAuthorById(id: string) {
@@ -179,6 +374,7 @@ export async function getWorkProfiles() {
   return works.map((work) => ({
     ...work,
     author: work.author?.name ?? "უცნობი ავტორი",
+    authorSlug: work.author?.slug ?? "",
     authorImageUrl: work.author?.image_url ?? null,
     genreLabel: genres[work.genre],
     periodLabel: work.author ? literaryPeriods[work.author.period] : "",
@@ -189,15 +385,23 @@ export async function getWorkProfiles() {
 
 export async function getWorkDetail(slug: string) {
   const works = await getWorks();
-  const work = works.find((item) => item.slug === slug);
+  const normalizedSlug = normalizeSearchValue(slug);
+  const work = works.find((item) => normalizeSearchValue(item.slug) === normalizedSlug);
 
   if (!work) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Work detail lookup failed", {
+        slug,
+        availableSlugs: works.slice(0, 30).map((item) => item.slug),
+      });
+    }
     return null;
   }
 
   return {
     ...work,
     author: work.author?.name ?? "უცნობი ავტორი",
+    authorSlug: work.author?.slug ?? "",
     authorImageUrl: work.author?.image_url ?? null,
     genreLabel: genres[work.genre],
     periodLabel: work.author ? literaryPeriods[work.author.period] : "",

@@ -1,14 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { AccessBadge, LockedContent } from "@/components/access-helpers";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
+import { hasAccessToLevel, type AccessLevel } from "@/src/lib/access";
 import type { getWorkDetail, QuizQuestion } from "@/src/lib/content";
 
 type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
 
-export function WorkDetailPage({ work, isAdmin }: { work: WorkDetail; isAdmin: boolean }) {
+export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; isAdmin: boolean; userPlan: AccessLevel }) {
+  const canAccess = isAdmin || hasAccessToLevel(userPlan, work.access_level);
   return (
     <main className="space-y-6 pb-8">
       <GlassCard className="p-6 sm:p-8">
@@ -23,18 +27,30 @@ export function WorkDetailPage({ work, isAdmin }: { work: WorkDetail; isAdmin: b
                 <div className="flex flex-wrap gap-2">
                   <Pill tone="gold">{work.periodLabel}</Pill>
                   <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                  <AccessBadge userPlan={userPlan} requiredLevel={work.access_level} />
                 </div>
               }
             />
             {isAdmin ? <WorkInlineEditor work={work} /> : null}
+            <div className="mt-4">
+              <Link href={`/authors/${work.authorSlug ?? ""}`} className="text-sm text-[color:var(--gold-soft)] transition hover:text-white">
+                ავტორი: {work.author}
+              </Link>
+            </div>
           </div>
         </div>
       </GlassCard>
 
-      <ContentSection title="1. გეგმა" body={work.plan} emptyText="გეგმა ჯერ არ არის დამატებული." />
-      <ChapterSection chapters={work.summary_chapters ?? []} />
-      <ContentSection title="3. ანალიზი" body={work.analysis} emptyText="ანალიზი ჯერ არ არის დამატებული." />
-      <QuizSection questions={work.quiz_data ?? []} />
+      {canAccess ? (
+        <>
+          <ContentSection title="1. გეგმა" body={work.plan} emptyText="გეგმა ჯერ არ არის დამატებული." />
+          <ChapterSection chapters={work.summary_chapters ?? []} />
+          <ContentSection title="3. ანალიზი" body={work.analysis} emptyText="ანალიზი ჯერ არ არის დამატებული." />
+          <QuizSection questions={work.quiz_data ?? []} />
+        </>
+      ) : (
+        <LockedContent requiredLevel={work.access_level} />
+      )}
     </main>
   );
 }

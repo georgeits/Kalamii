@@ -15,6 +15,9 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     id?: string;
+    name?: string;
+    period?: string;
+    movement?: string;
     biography?: string;
     image_url?: string | null;
   };
@@ -28,6 +31,9 @@ export async function POST(request: Request) {
   const { error } = await admin
     .from("authors")
     .update({
+      name: (body.name ?? "").trim(),
+      period: (body.period ?? "").trim(),
+      movement: (body.movement ?? "").trim(),
       biography: (body.biography ?? "").trim(),
       image_url: body.image_url?.trim() || null,
     })

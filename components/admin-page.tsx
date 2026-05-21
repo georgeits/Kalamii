@@ -1,17 +1,21 @@
 import Link from "next/link";
+import { getAccessLevelLabel } from "@/src/lib/access";
 import { AuthorPortrait } from "@/components/author-portrait";
-import { DeleteAuthorButton, DeleteWorkButton } from "@/components/admin-server-buttons";
+import { assignSubscriptionAction } from "@/app/admin/actions";
+import { DeleteAuthorButton, DeleteWorkButton, RemoveSubscriptionButton, SaveButton } from "@/components/admin-server-buttons";
 import { EmptyState, GlassCard, Pill, PremiumButton, SectionTitle } from "@/components/ui";
-import type { AuthorRecord, WorkRecord } from "@/src/lib/content";
+import type { AuthorRecord, SubscriptionRecord, WorkRecord } from "@/src/lib/content";
 
 type WorkWithAuthorName = WorkRecord & { author: { id: string; name: string } | null };
 
 export function AdminPage({
   authors,
   works,
+  subscriptions,
 }: {
   authors: AuthorRecord[];
   works: WorkWithAuthorName[];
+  subscriptions: SubscriptionRecord[];
 }) {
   return (
     <main className="space-y-6 pb-8">
@@ -92,6 +96,72 @@ export function AdminPage({
           ))}
         </CatalogSection>
       </div>
+
+      <GlassCard className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-2xl text-white">მომხმარებლების პაკეტები</h3>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">ხელით მიანიჭეთ უფასო, სტანდარტი ან პრემიუმი ელფოსტის მიხედვით. ეს დროებითია გადახდების ინტეგრაციამდე.</p>
+          </div>
+          <Pill tone="gold">{subscriptions.filter((item) => item.status === "active" && item.plan !== "free").length} აქტიური</Pill>
+        </div>
+
+        <form action={assignSubscriptionAction} className="mt-6 grid gap-4 rounded-[20px] border border-[color:var(--line)] bg-white/[0.04] p-4 md:grid-cols-5">
+          <label className="block md:col-span-2">
+            <span className="text-sm text-[color:var(--muted)]">მომხმარებლის ელფოსტა</span>
+            <input type="email" name="email" required className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+          </label>
+          <label className="block">
+            <span className="text-sm text-[color:var(--muted)]">პაკეტი</span>
+            <select name="plan" defaultValue="standard" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+              <option value="free">უფასო</option>
+              <option value="standard">სტანდარტი</option>
+              <option value="premium">პრემიუმი</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm text-[color:var(--muted)]">ხანგრძლივობა</span>
+            <select name="duration" defaultValue="30" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+              <option value="7">7 დღე</option>
+              <option value="30">30 დღე</option>
+              <option value="90">90 დღე</option>
+              <option value="custom">მითითებული თარიღი</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm text-[color:var(--muted)]">მითითებული თარიღი</span>
+            <input type="date" name="custom_expires_at" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+          </label>
+          <div className="md:col-span-5">
+            <SaveButton label="წვდომის მინიჭება" />
+          </div>
+        </form>
+
+        <div className="mt-6 grid gap-4">
+          {subscriptions.length > 0 ? subscriptions.map((subscription) => (
+            <GlassCard key={subscription.id} className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 className="text-lg font-semibold text-white">{subscription.full_name || subscription.email}</h4>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">{subscription.email}</p>
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">
+                    {subscription.expires_at ? `ვადა: ${new Date(subscription.expires_at).toLocaleDateString("ka-GE")}` : "ვადა არ არის მითითებული"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone={subscription.plan === "premium" ? "gold" : subscription.plan === "standard" ? "sky" : "default"}>
+                    {getAccessLevelLabel(subscription.plan)}
+                  </Pill>
+                  <Pill tone={subscription.status === "active" ? "success" : "danger"}>{subscription.status}</Pill>
+                  <RemoveSubscriptionButton id={subscription.id} />
+                </div>
+              </div>
+            </GlassCard>
+          )) : (
+            <EmptyState title="აქტიური პაკეტები ჯერ არ არის" description="პირველი ტესტური სტანდარტი ან პრემიუმი აქ გამოჩნდება მინიჭების შემდეგ." />
+          )}
+        </div>
+      </GlassCard>
     </main>
   );
 }

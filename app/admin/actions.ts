@@ -36,6 +36,8 @@ function revalidateContentRoutes() {
   revalidatePath("/authors");
   revalidatePath("/works");
   revalidatePath("/library");
+  revalidatePath("/profile");
+  revalidatePath("/dashboard");
 }
 
 export async function createAuthorAction(formData: FormData) {
@@ -196,4 +198,80 @@ function parseSummaryChapters(value: FormDataEntryValue | null) {
   } catch {
     return [];
   }
+}
+
+export async function assignSubscriptionAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const email = requiredText(formData, "email").toLowerCase();
+  const plan = requiredText(formData, "plan") || "free";
+  const duration = requiredText(formData, "duration");
+  const customDate = requiredText(formData, "custom_expires_at");
+
+  const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+  if (userError) {
+    throw new Error(`მომხმარებლის მოძებნა ვერ მოხერხდა: ${userError.message}`);
+  }
+
+  const user = users.users.find((item) => item.email?.toLowerCase() === email);
+  if (!user?.id) {
+    throw new Error("მომხმარებელი ამ ელფოსტით ვერ მოიძებნა.");
+  }
+
+  let expiresAt: string | null = null;
+  if (plan !== "free") {
+    if (duration === "custom") {
+      expiresAt = customDate ? new Date(customDate).toISOString() : null;
+    } else {
+      const days = Number(duration || "30");
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      expiresAt = date.toISOString();
+    }
+  }
+
+  const status =
+    plan === "free"
+      ? "cancelled"
+      : expiresAt && new Date(expiresAt).getTime() < Date.now()
+        ? "expired"
+        : "active";
+
+  const { error } = await supabase.from("subscriptions").upsert({
+    user_id: user.id,
+    email,
+    plan,
+    status,
+    starts_at: new Date().toISOString(),
+    expires_at: expiresAt,
+  });
+
+  if (error) {
+    throw new Error(`პაკეტის მინიჭება ვერ მოხერხდა: ${error.message}`);
+  }
+
+  revalidateContentRoutes();
+  redirect("/admin");
+}
+
+export async function removeSubscriptionAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const id = requiredText(formData, "id");
+
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      plan: "free",
+      status: "cancelled",
+      expires_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`წვდომის მოხსნა ვერ მოხერხდა: ${error.message}`);
+  }
+
+  revalidateContentRoutes();
+  redirect("/admin");
 }

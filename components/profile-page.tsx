@@ -16,7 +16,7 @@ export function ProfilePage({ profile }: { profile: ProfileRecord }) {
 
       <GlassCard className="p-6">
         <h3 className="font-serif text-2xl text-white">ანგარიშის მონაცემები</h3>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="mt-5 grid gap-3 md:grid-cols-4">
           <Surface className="p-4">
             <p className="font-semibold text-white">სრული სახელი</p>
             <p className="mt-2 text-sm text-[color:var(--muted)]">{displayName}</p>
@@ -32,6 +32,23 @@ export function ProfilePage({ profile }: { profile: ProfileRecord }) {
                 {profile.role === "admin" ? "ადმინისტრატორი" : "მომხმარებელი"}
               </Pill>
             </div>
+          </Surface>
+          <Surface className="p-4">
+            <p className="font-semibold text-white">პაკეტი</p>
+            <div className="mt-2">
+              <Pill tone={profile.subscription_plan === "premium" ? "gold" : profile.subscription_plan === "standard" ? "sky" : "default"}>
+                {profile.subscription_plan === "premium"
+                  ? "პრემიუმი"
+                  : profile.subscription_plan === "standard"
+                    ? "სტანდარტი"
+                    : "უფასო"}
+              </Pill>
+            </div>
+            <p className="mt-2 text-xs text-[color:var(--muted)]">
+              {profile.subscription_expires_at
+                ? `ვადა: ${new Date(profile.subscription_expires_at).toLocaleDateString("ka-GE")}`
+                : "ვადა არ არის მითითებული"}
+            </p>
           </Surface>
         </div>
       </GlassCard>

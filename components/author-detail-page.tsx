@@ -1,19 +1,41 @@
 import Link from "next/link";
+import { AccessBadge, LockedContent } from "@/components/access-helpers";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor, WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, PremiumButton, SectionTitle } from "@/components/ui";
+import { hasAccessToLevel, type AccessLevel } from "@/src/lib/access";
 import type { getAuthorDetail } from "@/src/lib/content";
 
 type AuthorDetail = NonNullable<Awaited<ReturnType<typeof getAuthorDetail>>>;
 
-export function AuthorDetailPage({ author, isAdmin }: { author: AuthorDetail; isAdmin: boolean }) {
+export function AuthorDetailPage({ author, isAdmin, userPlan }: { author: AuthorDetail; isAdmin: boolean; userPlan: AccessLevel }) {
+  const canAccess = isAdmin || hasAccessToLevel(userPlan, author.access_level);
   return (
     <main className="space-y-6 pb-8">
       <GlassCard className="p-6 sm:p-8">
-        <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-          <AuthorPortrait name={author.name} imageUrl={author.image_url} className="aspect-[4/5]" large />
+        <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+          <AuthorPortrait name={author.name} imageUrl={author.image_url} className="aspect-[4/5] min-h-[320px]" large />
           <div>
-            <SectionTitle eyebrow={`${author.periodLabel} • ${author.movement}`} title={author.name} description={author.biography} />
+            <SectionTitle
+              eyebrow={`${author.periodLabel} • ${author.movement}`}
+              title={author.name}
+              description="ავტორის სრული ბიოგრაფია და პროგრამაში შესული ნაწარმოებები."
+            />
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Pill tone="gold">{author.periodLabel}</Pill>
+              <Pill tone="sky">{author.movement}</Pill>
+              <Pill tone="rose">{author.works.length} ნაწარმოები</Pill>
+              <AccessBadge userPlan={userPlan} requiredLevel={author.access_level} />
+            </div>
+            {canAccess ? (
+              <div className="mt-6 rounded-[20px] border border-[color:var(--line)] bg-white/[0.04] p-5">
+                <p className="whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)]">{author.biography}</p>
+              </div>
+            ) : (
+              <div className="mt-6">
+                <LockedContent requiredLevel={author.access_level} />
+              </div>
+            )}
             {isAdmin ? <AuthorInlineEditor author={author} /> : null}
           </div>
         </div>
@@ -23,7 +45,7 @@ export function AuthorDetailPage({ author, isAdmin }: { author: AuthorDetail; is
         <GlassCard className="p-6">
           <h3 className="font-serif text-2xl text-white">ძირითადი თემები</h3>
           <div className="mt-4 flex flex-wrap gap-2">
-            {author.themes.map((theme) => <Pill key={theme} tone="sky">{theme}</Pill>)}
+            {canAccess ? author.themes.map((theme) => <Pill key={theme} tone="sky">{theme}</Pill>) : null}
             <Pill tone="rose">{author.accessLevelLabel}</Pill>
           </div>
           <div className="mt-6">
@@ -38,7 +60,9 @@ export function AuthorDetailPage({ author, isAdmin }: { author: AuthorDetail; is
               <div key={work.slug} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:bg-white/[0.075]">
                 <Link href={`/works/${work.slug}`}>
                   <p className="font-semibold text-white">{work.title}</p>
-                  <p className="mt-2 text-sm text-[color:var(--muted)]">{work.summary}</p>
+                  <p className="mt-2 text-sm text-[color:var(--muted)]">
+                    {hasAccessToLevel(userPlan, work.access_level) || isAdmin ? work.summary : "ეს მასალა ჩაკეტილია თქვენი პაკეტისთვის."}
+                  </p>
                   <div className="mt-4 flex flex-wrap gap-2"><Pill>{work.genreLabel}</Pill></div>
                 </Link>
                 {isAdmin ? <WorkInlineEditor work={work} compact /> : null}

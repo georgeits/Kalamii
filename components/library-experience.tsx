@@ -2,46 +2,60 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { AccessBadge } from "@/components/access-helpers";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor, WorkInlineEditor } from "@/components/public-inline-editors";
 import { genreTabs, libraryCategories, periodTabs } from "@/data/library";
 import { EmptyState, GlassCard, Pill, PremiumButton, SearchBar, SectionTitle, Surface, Tabs } from "@/components/ui";
+import type { AccessLevel } from "@/src/lib/access";
 import type { getLibraryData } from "@/src/lib/content";
+import { matchesSearch } from "@/src/lib/search";
 
 type LibraryData = Awaited<ReturnType<typeof getLibraryData>>;
 
-export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmin: boolean }) {
-  const [query, setQuery] = useState("");
+export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }: { data: LibraryData; isAdmin: boolean; initialQuery?: string; userPlan: AccessLevel }) {
+  const [query, setQuery] = useState(initialQuery);
   const [period, setPeriod] = useState("ყველა");
   const [genre, setGenre] = useState("ყველა");
   const [openAuthor, setOpenAuthor] = useState(data.featuredAuthor?.slug ?? "");
 
   const filteredAuthors = useMemo(() => {
-    const normalizedQuery = query.trim();
     return data.authors.filter((author) => {
       const matchesQuery =
-        normalizedQuery.length === 0 ||
-        author.name.includes(normalizedQuery) ||
-        author.periodLabel.includes(normalizedQuery) ||
-        author.movement.includes(normalizedQuery) ||
-        author.works.some((work) => work.title.includes(normalizedQuery));
+        matchesSearch(author.name, query) ||
+        matchesSearch(author.periodLabel, query) ||
+        matchesSearch(author.movement, query) ||
+        matchesSearch(author.biography, query) ||
+        author.themes.some((theme) => matchesSearch(theme, query)) ||
+        author.works.some((work) => matchesSearch(work.title, query) || matchesSearch(work.genreLabel, query));
       const matchesPeriod = period === "ყველა" || author.periodLabel === period;
       return matchesQuery && matchesPeriod;
     });
   }, [data.authors, period, query]);
 
   const filteredWorks = useMemo(() => {
-    const normalizedQuery = query.trim();
     return data.works.filter((work) => {
       const matchesQuery =
-        normalizedQuery.length === 0 ||
-        work.title.includes(normalizedQuery) ||
-        work.author.includes(normalizedQuery) ||
-        work.genreLabel.includes(normalizedQuery);
+        matchesSearch(work.title, query) ||
+        matchesSearch(work.author, query) ||
+        matchesSearch(work.genreLabel, query) ||
+        matchesSearch(work.periodLabel, query) ||
+        matchesSearch(work.summary, query) ||
+        work.themes.some((theme) => matchesSearch(theme, query)) ||
+        work.characters.some((character) => matchesSearch(character, query)) ||
+        work.symbols.some((symbol) => matchesSearch(symbol, query));
       const matchesGenre = genre === "ყველა" || work.genreLabel === genre;
       return matchesQuery && matchesGenre;
     });
   }, [data.works, genre, query]);
+
+  if (process.env.NODE_ENV !== "production") {
+    data.works.forEach((work) => {
+      if (!work.slug?.trim()) {
+        console.error("Missing work slug in library data", { workId: work.id, title: work.title });
+      }
+    });
+  }
 
   return (
     <main className="space-y-6 pb-8">
@@ -129,6 +143,7 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Pill tone="gold">{author.works.length} ნაწარმოები</Pill>
                         <Pill tone="rose">{author.accessLevelLabel}</Pill>
+                        <AccessBadge userPlan={userPlan} requiredLevel={author.access_level} />
                       </div>
                     </div>
                   </div>
@@ -150,6 +165,11 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
             );
           })}
         </div>
+        {filteredAuthors.length === 0 ? (
+          <div className="mt-5">
+            <EmptyState title="შედეგი ვერ მოიძებნა." description="სცადეთ სხვა საკვანძო სიტყვა, ავტორი, პერიოდი ან ნაწარმოები." />
+          </div>
+        ) : null}
       </GlassCard>
 
       <GlassCard id="works" className="p-5 sm:p-6">
@@ -169,6 +189,7 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
                   <div className="flex flex-wrap gap-2">
                     <Pill>{work.genreLabel}</Pill>
                     <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                    <AccessBadge userPlan={userPlan} requiredLevel={work.access_level} />
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
@@ -177,6 +198,11 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
             </div>
           ))}
         </div>
+        {filteredWorks.length === 0 ? (
+          <div className="mt-5">
+            <EmptyState title="შედეგი ვერ მოიძებნა." description="სცადეთ სხვა სათაური, ჟანრი, ავტორი ან საკვანძო სიტყვა." />
+          </div>
+        ) : null}
       </GlassCard>
     </main>
   );

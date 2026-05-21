@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { deleteAuthorAction, deleteWorkAction } from "@/app/admin/actions";
+import { deleteAuthorAction, deleteWorkAction, removeSubscriptionAction } from "@/app/admin/actions";
 
 export function SaveButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -31,6 +31,15 @@ export function DeleteWorkButton({ id }: { id: string }) {
     <form action={deleteWorkAction}>
       <input type="hidden" name="id" value={id} />
       <DeleteButton label="წაშლა" />
+    </form>
+  );
+}
+
+export function RemoveSubscriptionButton({ id }: { id: string }) {
+  return (
+    <form action={removeSubscriptionAction}>
+      <input type="hidden" name="id" value={id} />
+      <DeleteButton label="წვდომის მოხსნა" />
     </form>
   );
 }

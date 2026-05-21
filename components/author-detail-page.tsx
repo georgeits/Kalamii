@@ -57,8 +57,8 @@ export function AuthorDetailPage({ author, isAdmin, userPlan }: { author: Author
           <h3 className="font-serif text-2xl text-white">პროგრამაში შესული ნაწარმოებები</h3>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {author.works.map((work) => (
-              <div key={work.slug} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:bg-white/[0.075]">
-                <Link href={`/works/${work.slug}`}>
+              <div key={work.id} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:bg-white/[0.075]">
+                <Link href={`/works/${work.slug || work.id}`}>
                   <p className="font-semibold text-white">{work.title}</p>
                   <p className="mt-2 text-sm text-[color:var(--muted)]">
                     {hasAccessToLevel(userPlan, work.access_level) || isAdmin ? work.summary : "ეს მასალა ჩაკეტილია თქვენი პაკეტისთვის."}

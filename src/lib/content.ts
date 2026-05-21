@@ -2,6 +2,7 @@ import { genres, literaryPeriods } from "@/data/taxonomy";
 import { getAccessLevelLabel, type AccessLevel } from "@/src/lib/access";
 import { ADMIN_EMAIL, isAdminEmail } from "@/src/lib/auth";
 import { normalizeSearchValue } from "@/src/lib/search";
+import { ensureSlug } from "@/src/lib/slug";
 import { createClient } from "@/src/lib/supabase/server";
 
 export type QuizQuestion = {
@@ -101,7 +102,10 @@ async function fetchAuthors(supabase: Awaited<ReturnType<typeof createClient>>) 
     .order("name");
 
   if (!fullResult.error) {
-    return fullResult.data as AuthorRecord[];
+    return ((fullResult.data ?? []) as Array<Record<string, unknown>>).map((author) => ({
+      ...(author as unknown as AuthorRecord),
+      slug: ensureSlug(String(author.slug ?? author.name ?? ""), `author-${String(author.id ?? "").slice(0, 8)}`),
+    })) as AuthorRecord[];
   }
 
   if (!isMissingColumnError(fullResult.error.message, "authors.image_url")) {
@@ -119,6 +123,7 @@ async function fetchAuthors(supabase: Awaited<ReturnType<typeof createClient>>) 
 
   return (fallbackResult.data ?? []).map((author) => ({
     ...author,
+    slug: ensureSlug(String(author.slug ?? author.name ?? ""), `author-${String(author.id ?? "").slice(0, 8)}`),
     image_url: null,
   })) as AuthorRecord[];
 }
@@ -171,6 +176,7 @@ function normalizeWorks(rows: Record<string, unknown>[]) {
 
     return {
       ...work,
+      slug: ensureSlug(String(work.slug ?? work.title ?? ""), `work-${String(work.id ?? "").slice(0, 8)}`),
       author: authorRecord
         ? {
             id: String((authorRecord as Record<string, unknown>).id ?? ""),
@@ -382,7 +388,8 @@ export async function getAuthorsWithWorks() {
 export async function getAuthorDetail(slug: string) {
   const authors = await getAuthorsWithWorks();
   const normalizedSlug = normalizeSearchValue(slug);
-  const author = authors.find((item) => normalizeSearchValue(item.slug) === normalizedSlug) ?? null;
+  const author =
+    authors.find((item) => normalizeSearchValue(item.slug) === normalizedSlug || item.id === slug) ?? null;
 
   if (!author && process.env.NODE_ENV !== "production") {
     console.error("Author detail lookup failed", {
@@ -417,7 +424,7 @@ export async function getWorkProfiles() {
 export async function getWorkDetail(slug: string) {
   const works = await getWorks();
   const normalizedSlug = normalizeSearchValue(slug);
-  const work = works.find((item) => normalizeSearchValue(item.slug) === normalizedSlug);
+  const work = works.find((item) => normalizeSearchValue(item.slug) === normalizedSlug || item.id === slug);
 
   if (!work) {
     if (process.env.NODE_ENV !== "production") {

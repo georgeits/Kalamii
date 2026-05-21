@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
 import { getCurrentProfile } from "@/src/lib/content";
+import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 async function requireAdmin() {
@@ -43,12 +44,14 @@ function revalidateContentRoutes() {
 export async function createAuthorAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
+  const name = requiredText(formData, "name");
+  const slug = ensureSlug(requiredText(formData, "slug") || name, `author-${crypto.randomUUID().slice(0, 8)}`);
 
   const { data, error } = await supabase
     .from("authors")
     .insert({
-      slug: requiredText(formData, "slug"),
-      name: requiredText(formData, "name"),
+      slug,
+      name,
       period: requiredText(formData, "period"),
       movement: requiredText(formData, "movement"),
       biography: requiredText(formData, "biography"),
@@ -71,12 +74,14 @@ export async function updateAuthorAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
   const id = requiredText(formData, "id");
+  const name = requiredText(formData, "name");
+  const slug = ensureSlug(requiredText(formData, "slug") || name, `author-${id.slice(0, 8)}`);
 
   const { error } = await supabase
     .from("authors")
     .update({
-      slug: requiredText(formData, "slug"),
-      name: requiredText(formData, "name"),
+      slug,
+      name,
       period: requiredText(formData, "period"),
       movement: requiredText(formData, "movement"),
       biography: requiredText(formData, "biography"),
@@ -108,12 +113,14 @@ export async function deleteAuthorAction(formData: FormData) {
 export async function createWorkAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
+  const title = requiredText(formData, "title");
+  const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${crypto.randomUUID().slice(0, 8)}`);
 
   const { data, error } = await supabase
     .from("works")
     .insert({
-      slug: requiredText(formData, "slug"),
-      title: requiredText(formData, "title"),
+      slug,
+      title,
       author_id: requiredText(formData, "author_id"),
       genre: requiredText(formData, "genre"),
       summary: requiredText(formData, "summary"),
@@ -142,12 +149,14 @@ export async function updateWorkAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
   const id = requiredText(formData, "id");
+  const title = requiredText(formData, "title");
+  const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${id.slice(0, 8)}`);
 
   const { error } = await supabase
     .from("works")
     .update({
-      slug: requiredText(formData, "slug"),
-      title: requiredText(formData, "title"),
+      slug,
+      title,
       author_id: requiredText(formData, "author_id"),
       genre: requiredText(formData, "genre"),
       summary: requiredText(formData, "summary"),

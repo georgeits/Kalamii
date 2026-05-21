@@ -33,7 +33,7 @@ export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; 
             />
             {isAdmin ? <WorkInlineEditor work={work} /> : null}
             <div className="mt-4">
-              <Link href={`/authors/${work.authorSlug ?? ""}`} className="text-sm text-[color:var(--gold-soft)] transition hover:text-white">
+              <Link href={`/authors/${work.authorSlug || work.author_id || ""}`} className="text-sm text-[color:var(--gold-soft)] transition hover:text-white">
                 ავტორი: {work.author}
               </Link>
             </div>

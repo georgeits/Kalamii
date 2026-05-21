@@ -96,13 +96,7 @@ export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }
               <Pill tone="rose">{data.featuredAuthor.accessLevelLabel}</Pill>
             </div>
             <div className="mt-6">
-              {data.featuredAuthor.slug?.trim() ? (
-                <PremiumButton href={`/authors/${data.featuredAuthor.slug}`} variant="secondary">დეტალურად</PremiumButton>
-              ) : (
-                <span className="inline-flex min-h-11 items-center rounded-full border border-[color:var(--line)] px-5 py-2 text-sm text-[color:var(--muted)]">
-                  slug არ არის
-                </span>
-              )}
+              <PremiumButton href={`/authors/${data.featuredAuthor.slug || data.featuredAuthor.id}`} variant="secondary">დეტალურად</PremiumButton>
             </div>
           </GlassCard>
 
@@ -141,21 +135,14 @@ export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {filteredAuthors.map((author) => {
-            const authorHref = author.slug?.trim() ? `/authors/${author.slug}` : null;
+            const authorPath = author.slug?.trim() || author.id;
+            const authorHref = `/authors/${authorPath}`;
             return (
               <article key={author.id} className="rounded-[20px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:border-[rgba(244,177,93,0.24)] hover:bg-white/[0.07]">
                 <div className="flex h-full flex-col">
                   <Link
-                    href={authorHref ?? "#"}
-                    className={`block ${authorHref ? "cursor-pointer" : "cursor-not-allowed"}`}
-                    onClick={(event) => {
-                      if (!authorHref) {
-                        event.preventDefault();
-                        if (process.env.NODE_ENV !== "production") {
-                          console.error("Missing author slug in library card", { authorId: author.id, name: author.name });
-                        }
-                      }
-                    }}
+                    href={authorHref}
+                    className="block cursor-pointer"
                   >
                     <div className="flex items-start gap-4">
                     <AuthorPortrait name={author.name} imageUrl={author.image_url} className="h-14 w-14 shrink-0 rounded-[18px]" />
@@ -172,15 +159,9 @@ export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }
                     </div>
                   </Link>
                   <div className="mt-4 flex items-center justify-between gap-3">
-                    {authorHref ? (
-                      <Link href={authorHref} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
-                        დეტალურად
-                      </Link>
-                    ) : (
-                      <span className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[color:var(--muted)]">
-                        slug არ არის
-                      </span>
-                    )}
+                    <Link href={authorHref} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
+                      დეტალურად
+                    </Link>
                     {isAdmin ? <AuthorInlineEditor author={author} compact /> : null}
                   </div>
                 </div>
@@ -202,20 +183,13 @@ export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }
         </div>
         <div className="mt-5 grid gap-3 xl:grid-cols-2">
           {filteredWorks.map((work) => {
-            const workHref = work.slug?.trim() ? `/works/${work.slug}` : null;
+            const workPath = work.slug?.trim() || work.id;
+            const workHref = `/works/${workPath}`;
             return (
             <div key={work.id} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:border-[rgba(244,177,93,0.24)] hover:bg-white/[0.07]">
               <Link
-                href={workHref ?? "#"}
-                className={workHref ? "block cursor-pointer" : "block cursor-not-allowed"}
-                onClick={(event) => {
-                  if (!workHref) {
-                    event.preventDefault();
-                    if (process.env.NODE_ENV !== "production") {
-                      console.error("Missing work slug in library card", { workId: work.id, title: work.title });
-                    }
-                  }
-                }}
+                href={workHref}
+                className="block cursor-pointer"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -231,15 +205,9 @@ export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
               </Link>
               <div className="mt-4 flex items-center justify-between gap-3">
-                {workHref ? (
-                  <Link href={workHref} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
-                    გახსნა
-                  </Link>
-                ) : (
-                  <span className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[color:var(--muted)]">
-                    slug არ არის
-                  </span>
-                )}
+                <Link href={workHref} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">
+                  გახსნა
+                </Link>
                 {isAdmin ? <WorkInlineEditor work={work} compact /> : null}
               </div>
             </div>

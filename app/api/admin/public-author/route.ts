@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
+import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { createClient } from "@/src/lib/supabase/server";
 
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
     .from("authors")
     .update({
       name: (body.name ?? "").trim(),
+      slug: ensureSlug((body.name ?? "").trim(), `author-${id.slice(0, 8)}`),
       period: (body.period ?? "").trim(),
       movement: (body.movement ?? "").trim(),
       biography: (body.biography ?? "").trim(),

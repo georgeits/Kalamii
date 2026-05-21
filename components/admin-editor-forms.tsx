@@ -42,7 +42,7 @@ export function AdminAuthorEditor({
             <div className="grid gap-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="სახელი" name="name" defaultValue={author?.name} />
-                <Field label="Slug" name="slug" defaultValue={author?.slug} />
+                <Field label="Slug" name="slug" defaultValue={author?.slug} helper="თუ ცარიელია, ავტომატურად დაგენერირდება სახელიდან." />
               </div>
               <div className="grid gap-4 md:grid-cols-3">
                 <SelectField label="პერიოდი" name="period" defaultValue={author?.period} options={authorPeriodOptions} />
@@ -92,7 +92,7 @@ export function AdminWorkEditor({
           {work ? <input type="hidden" name="id" value={work.id} /> : null}
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="სათაური" name="title" defaultValue={work?.title} />
-            <Field label="Slug" name="slug" defaultValue={work?.slug} />
+            <Field label="Slug" name="slug" defaultValue={work?.slug} helper="თუ ცარიელია, ავტომატურად დაგენერირდება სათაურიდან." />
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <SelectField

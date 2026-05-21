@@ -7,6 +7,7 @@ import {
   updateWorkAction,
 } from "@/app/admin/actions";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
+import { WorkStructuredFields } from "@/components/work-structured-fields";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { AuthorRecord, WorkRecord } from "@/src/lib/content";
 
@@ -128,8 +129,6 @@ function AdminWorkForm({
   accessLevelOptions: readonly Option[];
   submitLabel: string;
 }) {
-  const quizValue = work?.quiz_data?.map((item) => item.question).join("\n") ?? "";
-
   return (
     <form action={action} className="space-y-3">
       {work ? <input type="hidden" name="id" value={work.id} /> : null}
@@ -143,9 +142,9 @@ function AdminWorkForm({
         <SelectField label="წვდომა" name="access_level" defaultValue={work?.access_level ?? "free"} options={accessLevelOptions} />
       </div>
       <TextAreaField label="გეგმა" name="plan" defaultValue={work?.plan ?? ""} rows={4} />
-      <TextAreaField label="შინაარსი" name="summary" defaultValue={work?.summary} rows={4} />
+      <TextAreaField label="მოკლე აღწერა" name="summary" defaultValue={work?.summary} rows={4} />
+      <WorkStructuredFields chapterFieldName="summary_chapters" quizFieldName="quiz_questions" initialChapters={work?.summary_chapters ?? []} initialQuestions={work?.quiz_data ?? []} />
       <TextAreaField label="ანალიზი" name="analysis" defaultValue={work?.analysis ?? ""} rows={6} />
-      <TextAreaField label="ტესტი" name="quiz_questions" defaultValue={quizValue} rows={5} helper="თითო კითხვა ახალ ხაზზე" />
       <Field label="თემები" name="themes" defaultValue={work?.themes.join(", ")} helper="მძიმით გამოყოფილი სია" />
       <Field label="პერსონაჟები" name="characters" defaultValue={work?.characters.join(", ")} helper="მძიმით გამოყოფილი სია" />
       <Field label="სიმბოლოები" name="symbols" defaultValue={work?.symbols.join(", ")} helper="მძიმით გამოყოფილი სია" />

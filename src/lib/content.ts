@@ -7,7 +7,19 @@ import { createClient } from "@/src/lib/supabase/server";
 export type AccessLevel = "free" | "standard" | "premium";
 
 export type QuizQuestion = {
+  id?: string;
   question: string;
+  options?: {
+    id: string;
+    text: string;
+    isCorrect: boolean;
+  }[];
+};
+
+export type SummaryChapter = {
+  id: string;
+  title: string;
+  body: string;
 };
 
 export type ProfileRecord = {
@@ -38,6 +50,7 @@ export type WorkRecord = {
   author_id: string;
   genre: keyof typeof genres;
   summary: string;
+  summary_chapters?: SummaryChapter[] | null;
   plan?: string | null;
   analysis?: string | null;
   quiz_data?: QuizQuestion[] | null;
@@ -81,6 +94,7 @@ function fallbackWorkRows(): WorkWithAuthor[] {
       author_id: author?.id ?? `fallback-author-${index}`,
       genre: work.genre,
       summary: work.summary,
+      summary_chapters: [],
       plan: null,
       analysis: null,
       quiz_data: [],

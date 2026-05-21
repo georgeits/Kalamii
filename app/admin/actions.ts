@@ -97,6 +97,7 @@ export async function createWorkAction(formData: FormData) {
     author_id: requiredText(formData, "author_id"),
     genre: requiredText(formData, "genre"),
     summary: requiredText(formData, "summary"),
+    summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
     plan: requiredText(formData, "plan") || null,
     analysis: requiredText(formData, "analysis") || null,
     quiz_data: parseQuizQuestions(formData.get("quiz_questions")),
@@ -124,6 +125,7 @@ export async function updateWorkAction(formData: FormData) {
       author_id: requiredText(formData, "author_id"),
       genre: requiredText(formData, "genre"),
       summary: requiredText(formData, "summary"),
+      summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
       plan: requiredText(formData, "plan") || null,
       analysis: requiredText(formData, "analysis") || null,
       quiz_data: parseQuizQuestions(formData.get("quiz_questions")),
@@ -147,9 +149,19 @@ export async function deleteWorkAction(formData: FormData) {
 }
 
 function parseQuizQuestions(value: FormDataEntryValue | null) {
-  return String(value ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((question) => ({ question }));
+  try {
+    const parsed = JSON.parse(String(value ?? "[]"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseSummaryChapters(value: FormDataEntryValue | null) {
+  try {
+    const parsed = JSON.parse(String(value ?? "[]"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

@@ -3,12 +3,8 @@ import { ADMIN_EMAIL } from "@/src/lib/auth";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { createClient } from "@/src/lib/supabase/server";
 
-function parseQuizQuestions(value: string) {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((question) => ({ question }));
+function parseJsonArray(value: unknown) {
+  return Array.isArray(value) ? value : [];
 }
 
 export async function POST(request: Request) {
@@ -25,8 +21,9 @@ export async function POST(request: Request) {
     id?: string;
     plan?: string;
     summary?: string;
+    summary_chapters?: unknown;
     analysis?: string;
-    quiz_questions?: string;
+    quiz_data?: unknown;
   };
 
   const id = body.id?.trim();
@@ -40,8 +37,9 @@ export async function POST(request: Request) {
     .update({
       plan: (body.plan ?? "").trim() || null,
       summary: (body.summary ?? "").trim(),
+      summary_chapters: parseJsonArray(body.summary_chapters),
       analysis: (body.analysis ?? "").trim() || null,
-      quiz_data: parseQuizQuestions(body.quiz_questions ?? ""),
+      quiz_data: parseJsonArray(body.quiz_data),
     })
     .eq("id", id);
 

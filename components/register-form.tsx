@@ -80,9 +80,7 @@ export function RegisterForm() {
       });
 
       if (!profileResponse.ok) {
-        const payload = (await profileResponse.json().catch(() => null)) as { error?: string } | null;
-        setErrorMessage(payload?.error ?? "პროფილის შენახვა ვერ მოხერხდა.");
-        return;
+        console.error("Profile sync failed after sign-up");
       }
 
       router.replace(normalizedEmail === ADMIN_EMAIL ? "/admin" : "/dashboard");

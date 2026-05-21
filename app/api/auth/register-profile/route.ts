@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRoleForEmail } from "@/src/lib/auth";
+import { createClient } from "@/src/lib/supabase/server";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 type ProfilePayload = {
@@ -53,18 +54,48 @@ async function upsertProfile(body: ProfilePayload) {
     return { ok: false as const, error: "პროფილის მონაცემები არასრულია.", status: 400 };
   }
 
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("profiles").upsert({
+  const profile = {
     id,
     full_name: fullName,
     email,
     role: getRoleForEmail(email),
-  });
+  };
 
-  if (error) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user?.id === id) {
+      const { error } = await supabase.from("profiles").upsert(profile);
+
+      if (!error) {
+        return { ok: true as const };
+      }
+    }
+  } catch {
+    // Fall through to the admin client so profile sync can still succeed when available.
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const { error } = await supabase.from("profiles").upsert(profile);
+
+    if (error) {
+      return {
+        ok: false as const,
+        error: `პროფილის შენახვა ვერ მოხერხდა: ${error.message}`,
+        status: 500,
+      };
+    }
+  } catch (error) {
     return {
       ok: false as const,
-      error: `პროფილის შენახვა ვერ მოხერხდა: ${error.message}`,
+      error:
+        error instanceof Error
+          ? `პროფილის შენახვა ვერ მოხერხდა: ${error.message}`
+          : "პროფილის შენახვა ვერ მოხერხდა.",
       status: 500,
     };
   }

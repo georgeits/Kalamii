@@ -422,8 +422,36 @@ export async function getWorkProfiles() {
 }
 
 export async function getWorkDetail(slug: string) {
-  const works = await getWorks();
   const normalizedSlug = normalizeSearchValue(slug);
+  const supabase = await createClient();
+  const directResult = await supabase
+    .from("works")
+    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (directResult.error && process.env.NODE_ENV !== "production") {
+    console.error("Direct work slug query failed", {
+      slug,
+      error: directResult.error.message,
+    });
+  }
+
+  if (directResult.data) {
+    const [work] = normalizeWorks([directResult.data as Record<string, unknown>]);
+    return {
+      ...work,
+      author: work.author?.name ?? "უცნობი ავტორი",
+      authorSlug: work.author?.slug ?? "",
+      authorImageUrl: work.author?.image_url ?? null,
+      genreLabel: genres[work.genre],
+      periodLabel: work.author ? literaryPeriods[work.author.period] : "",
+      movement: work.author?.movement ?? "",
+      accessLevelLabel: getAccessLevelLabel(work.access_level),
+    };
+  }
+
+  const works = await getWorks();
   const work = works.find((item) => normalizeSearchValue(item.slug) === normalizedSlug || item.id === slug);
 
   if (!work) {

@@ -60,36 +60,52 @@ export function AdminAuthorImageInput({ authorId, currentImageUrl, onUploaded }:
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 rounded-[22px] border border-[color:var(--line)] bg-white/[0.03] p-4 sm:p-5">
       <input type="hidden" name="image_url" value={imageUrl} />
-      <label htmlFor={inputId} className="block text-sm text-[color:var(--muted)]">
+      <label htmlFor={inputId} className="block text-sm font-medium text-[color:var(--muted)]">
         ავტორის ფოტო
       </label>
-      <div className="flex items-start gap-4">
-        <div className="grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-[18px] border border-[color:var(--line)] bg-white/[0.045]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="grid h-36 w-28 shrink-0 place-items-center self-start overflow-hidden rounded-[20px] border border-[color:var(--line)] bg-white/[0.045]">
           {previewUrl ? (
             <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
           ) : (
             <span className="font-serif text-4xl text-[color:var(--gold-soft)]">A</span>
           )}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-3">
           <input
             id={inputId}
             type="file"
             accept="image/*"
             disabled={!canUpload || isUploading}
             onChange={handleFileChange}
-            className="block w-full text-sm text-[color:var(--muted)] file:mr-4 file:rounded-full file:border-0 file:bg-[rgba(244,177,93,0.18)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[color:var(--gold-soft)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="sr-only"
           />
-          <p className="mt-2 text-xs text-[color:var(--muted)]">
+          <label
+            htmlFor={inputId}
+            className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border px-5 py-2 text-sm font-semibold transition ${
+              !canUpload || isUploading
+                ? "cursor-not-allowed border-[color:var(--line)] bg-white/[0.04] text-[color:var(--muted)] opacity-60"
+                : "border-[rgba(244,177,93,0.24)] bg-[rgba(244,177,93,0.12)] text-[color:var(--gold-soft)] hover:bg-[rgba(244,177,93,0.18)]"
+            }`}
+          >
+            {isUploading ? "იტვირთება..." : "ფაილის არჩევა"}
+          </label>
+          <input
+            type="text"
+            readOnly
+            value={previewUrl ? "სურათი არჩეულია" : "ფაილი ჯერ არ არის არჩეული"}
+            className="h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-[color:var(--muted)] outline-none"
+          />
+          <p className="text-sm leading-6 text-[color:var(--muted)]">
             {!canUpload
               ? "ფოტოს ატვირთვა ხელმისაწვდომი გახდება მას შემდეგ, რაც ავტორს ჯერ შექმნით ბაზაში."
               : isUploading
                 ? "სურათი იტვირთება..."
                 : "აირჩიეთ პორტრეტი. თუ ავტორი ახალია, ჯერ შეინახეთ და შემდეგ შეცვალეთ ფოტო."}
           </p>
-          {error ? <p className="mt-2 text-xs text-[color:var(--danger)]">{error}</p> : null}
+          {error ? <p className="text-sm leading-6 text-[color:var(--danger)]">{error}</p> : null}
         </div>
       </div>
     </div>

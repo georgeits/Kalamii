@@ -37,14 +37,16 @@ export function AdminAuthorEditor({
       <GlassCard className="p-6">
         <form action={action} className="space-y-5">
           {author ? <input type="hidden" name="id" value={author.id} /> : null}
-          <div className="grid gap-4 md:grid-cols-[160px_1fr]">
-            <AdminAuthorImageInput authorId={author?.id} currentImageUrl={author?.image_url} />
-            <div className="grid gap-4">
-              <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start">
+            <div className="min-w-0">
+              <AdminAuthorImageInput authorId={author?.id} currentImageUrl={author?.image_url} />
+            </div>
+            <div className="grid min-w-0 gap-4">
+              <div className="grid gap-4 lg:grid-cols-2">
                 <Field label="სახელი" name="name" defaultValue={author?.name} />
                 <Field label="Slug" name="slug" defaultValue={author?.slug} helper="თუ ცარიელია, ავტომატურად დაგენერირდება სახელიდან." />
               </div>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 lg:grid-cols-3">
                 <SelectField label="პერიოდი" name="period" defaultValue={author?.period} options={authorPeriodOptions} />
                 <Field label="მიმდინარეობა" name="movement" defaultValue={author?.movement} />
                 <SelectField label="წვდომა" name="access_level" defaultValue={author?.access_level ?? "free"} options={accessLevelOptions} />
@@ -128,9 +130,9 @@ export function AdminWorkEditor({
 
 function Field({ label, name, defaultValue, helper }: { label: string; name: string; defaultValue?: string; helper?: string }) {
   return (
-    <label className="block">
-      <span className="text-sm text-[color:var(--muted)]">{label}</span>
-      <input type="text" name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
+    <label className="block min-w-0">
+      <span className="text-sm font-medium text-[color:var(--muted)]">{label}</span>
+      <input type="text" name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
       {helper ? <p className="mt-2 text-xs text-[color:var(--muted)]">{helper}</p> : null}
     </label>
   );
@@ -138,18 +140,18 @@ function Field({ label, name, defaultValue, helper }: { label: string; name: str
 
 function TextAreaField({ label, name, defaultValue, rows }: { label: string; name: string; defaultValue?: string; rows: number }) {
   return (
-    <label className="block">
-      <span className="text-sm text-[color:var(--muted)]">{label}</span>
-      <textarea name={name} defaultValue={defaultValue} rows={rows} className="mt-2 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
+    <label className="block min-w-0">
+      <span className="text-sm font-medium text-[color:var(--muted)]">{label}</span>
+      <textarea name={name} defaultValue={defaultValue} rows={rows} className="mt-2 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
     </label>
   );
 }
 
 function SelectField({ label, name, defaultValue, options }: { label: string; name: string; defaultValue?: string; options: readonly Option[] }) {
   return (
-    <label className="block">
-      <span className="text-sm text-[color:var(--muted)]">{label}</span>
-      <select name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]">
+    <label className="block min-w-0">
+      <span className="text-sm font-medium text-[color:var(--muted)]">{label}</span>
+      <select name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]">
         {options.map((option) => (
           <option key={`${name}-${option.value}`} value={option.value}>
             {option.label}

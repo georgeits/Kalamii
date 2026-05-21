@@ -32,6 +32,14 @@ export function AuthorInlineEditor({
 
     const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     if (!response.ok) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Author save failed", {
+          authorId: author.id,
+          biography,
+          imageUrl,
+          payload,
+        });
+      }
       setStatus(payload?.error ?? "შენახვა ვერ მოხერხდა.");
       setIsSaving(false);
       return;
@@ -107,8 +115,19 @@ export function WorkInlineEditor({
       }),
     });
 
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    const payload = (await response.json().catch(() => null)) as { error?: string; work?: unknown } | null;
     if (!response.ok) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Work save failed", {
+          workId: work.id,
+          plan,
+          summary,
+          chapters,
+          analysis,
+          quizQuestions,
+          payload,
+        });
+      }
       setStatus(payload?.error ?? "შენახვა ვერ მოხერხდა.");
       setIsSaving(false);
       return;

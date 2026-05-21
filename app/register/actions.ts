@@ -30,10 +30,7 @@ export async function registerUser(_: string | null, formData: FormData) {
 
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -48,22 +45,26 @@ export async function registerUser(_: string | null, formData: FormData) {
       return getAuthErrorMessage(error.message);
     }
 
-    if (!user) {
-      return "რეგისტრაცია ვერ დასრულდა. სცადეთ თავიდან.";
+    if (!data.user) {
+      return "რეგისტრაცია ვერ დასრულდა: Supabase-მა მომხმარებელი არ დააბრუნა.";
     }
 
     const adminClient = createAdminClient();
     const { error: profileError } = await adminClient.from("profiles").upsert({
-      id: user.id,
+      id: data.user.id,
       full_name: fullName,
       email,
       role,
     });
 
     if (profileError) {
-      return "ანგარიში შეიქმნა, მაგრამ როლის მინიჭება ვერ დასრულდა. გადაამოწმეთ Supabase-ის ცხრილები.";
+      return `ანგარიში შეიქმნა, მაგრამ პროფილის შენახვა ვერ დასრულდა: ${profileError.message}`;
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) {
+      return `რეგისტრაციის შეცდომა: ${error.message}`;
+    }
+
     return "ავტორიზაციის სერვისთან დაკავშირება ვერ მოხერხდა. სცადეთ თავიდან.";
   }
 

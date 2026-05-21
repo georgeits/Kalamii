@@ -1,9 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
 import { SaveButton } from "@/components/admin-server-buttons";
 import { WorkStructuredFields } from "@/components/work-structured-fields";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { AuthorRecord, WorkRecord } from "@/src/lib/content";
+import { slugifyGeorgian } from "@/src/lib/slug";
 
 type Option = { value: string; label: string };
 type WorkWithAuthorName = WorkRecord & { author: { id: string; name: string } | null };
@@ -80,6 +84,9 @@ export function AdminWorkEditor({
   accessLevelOptions: readonly Option[];
   mode: "create" | "edit";
 }) {
+  const [title, setTitle] = useState(work?.title ?? "");
+  const [slug, setSlug] = useState(work?.slug ?? slugifyGeorgian(work?.title ?? ""));
+
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
@@ -93,8 +100,24 @@ export function AdminWorkEditor({
         <form action={action} className="space-y-5">
           {work ? <input type="hidden" name="id" value={work.id} /> : null}
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="სათაური" name="title" defaultValue={work?.title} />
-            <Field label="Slug" name="slug" defaultValue={work?.slug} helper="თუ ცარიელია, ავტომატურად დაგენერირდება სათაურიდან." />
+            <Field label="სათაური" name="title" defaultValue={work?.title} value={title} onValueChange={(nextValue) => {
+              setTitle(nextValue);
+              setSlug(slugifyGeorgian(nextValue));
+            }} />
+            <div className="block min-w-0">
+              <span className="text-sm font-medium text-[color:var(--muted)]">Slug</span>
+              <div className="mt-2 flex gap-2">
+                <input type="text" name="slug" readOnly value={slug} className="h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+                <button
+                  type="button"
+                  onClick={() => setSlug(slugifyGeorgian(title))}
+                  className="shrink-0 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8"
+                >
+                  slug-ის განახლება
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--muted)]">slug ავტომატურად შეიქმნება სათაურიდან.</p>
+            </div>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <SelectField
@@ -128,11 +151,31 @@ export function AdminWorkEditor({
   );
 }
 
-function Field({ label, name, defaultValue, helper }: { label: string; name: string; defaultValue?: string; helper?: string }) {
+function Field({
+  label,
+  name,
+  defaultValue,
+  helper,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string;
+  helper?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+}) {
   return (
     <label className="block min-w-0">
       <span className="text-sm font-medium text-[color:var(--muted)]">{label}</span>
-      <input type="text" name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
+      <input
+        type="text"
+        name={name}
+        {...(value !== undefined ? { value } : { defaultValue })}
+        onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
+        className="mt-2 h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]"
+      />
       {helper ? <p className="mt-2 text-xs text-[color:var(--muted)]">{helper}</p> : null}
     </label>
   );

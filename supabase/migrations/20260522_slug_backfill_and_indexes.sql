@@ -8,15 +8,55 @@ immutable
 as $$
   select trim(both '-' from regexp_replace(
     regexp_replace(
-      regexp_replace(lower(coalesce(value, '')), '[''"`´]+', '', 'g'),
-      '[^a-z0-9ა-ჰ\s-]+',
-      ' ',
+      replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(
+      replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(
+      replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(
+        lower(coalesce(value, '')),
+        'ჭ', 'ch'),
+        'ჩ', 'ch'),
+        'შ', 'sh'),
+        'ც', 'ts'),
+        'ძ', 'dz'),
+        'წ', 'ts'),
+        'ჟ', 'zh'),
+        'ხ', 'kh'),
+        'ღ', 'gh'),
+        'თ', 't'),
+        'ქ', 'k'),
+        'ფ', 'p'),
+        'ჯ', 'j'),
+        'ყ', 'q'),
+        'ა', 'a'),
+        'ბ', 'b'),
+        'გ', 'g'),
+        'დ', 'd'),
+        'ე', 'e'),
+        'ვ', 'v'),
+        'ზ', 'z'),
+        'ი', 'i'),
+        'კ', 'k'),
+        'ლ', 'l'),
+        'მ', 'm'),
+        'ნ', 'n'),
+        'ო', 'o'),
+        'პ', 'p'),
+        'რ', 'r'),
+        'ს', 's'),
+        'ტ', 't'),
+        'უ', 'u'),
+        'ჰ', 'h'),
+      '[''"`´]+',
+      '',
       'g'
     ),
-    '\s+|-+',
-    '-',
+    '[^a-z0-9\s-]+',
+    ' ',
     'g'
-  ));
+  ),
+  '\s+|-+',
+  '-',
+  'g'
+));
 $$;
 
 with normalized as (

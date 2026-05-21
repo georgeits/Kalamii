@@ -7,18 +7,18 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-ADMIN_EMAILS=you@example.com,other-admin@example.com
 ```
 
 Then run the SQL in [supabase/migrations/20260521_auth_roles_and_content.sql](/Users/george/Kalamii/kartuli-exam-platform/supabase/migrations/20260521_auth_roles_and_content.sql) inside your Supabase project.
 
-Role assignment happens during registration:
+Admin rule:
 
-- Emails listed in `ADMIN_EMAILS` receive the `admin` role.
-- All other emails receive the `user` role.
+- Only `giorgijavakhishvili75@gmail.com` is treated as admin.
+- Every other email is a normal `user`.
+- The admin signs in with the normal password created during registration through Supabase Auth.
 - Only `admin` users can open `/admin` or write to `authors` and `works`.
 
-Public author and work pages read from the live Supabase tables, so admin edits are reflected immediately across the site.
+Public author and work pages read from the live Supabase tables, and the admin panel also manages `summaries` and `study_materials`, so edits are reflected immediately across the site.
 
 ## Getting Started
 

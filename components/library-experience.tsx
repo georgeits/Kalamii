@@ -2,18 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { authorsWithWorks, featuredAuthor, genreTabs, libraryCategories, periodTabs, workProfiles } from "@/data/library";
+import { genreTabs, libraryCategories, periodTabs } from "@/data/library";
 import { EmptyState, GlassCard, Pill, PremiumButton, SearchBar, SectionTitle, Surface, Tabs } from "@/components/ui";
+import type { getLibraryData } from "@/src/lib/content";
 
-export function LibraryExperience() {
+type LibraryData = Awaited<ReturnType<typeof getLibraryData>>;
+
+export function LibraryExperience({ data }: { data: LibraryData }) {
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("ყველა");
   const [genre, setGenre] = useState("ყველა");
-  const [openAuthor, setOpenAuthor] = useState(featuredAuthor.slug);
+  const [openAuthor, setOpenAuthor] = useState(data.featuredAuthor?.slug ?? "");
 
   const filteredAuthors = useMemo(() => {
     const normalizedQuery = query.trim();
-    return authorsWithWorks.filter((author) => {
+    return data.authors.filter((author) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         author.name.includes(normalizedQuery) ||
@@ -23,11 +26,11 @@ export function LibraryExperience() {
       const matchesPeriod = period === "ყველა" || author.periodLabel === period;
       return matchesQuery && matchesPeriod;
     });
-  }, [period, query]);
+  }, [data.authors, period, query]);
 
   const filteredWorks = useMemo(() => {
     const normalizedQuery = query.trim();
-    return workProfiles.filter((work) => {
+    return data.works.filter((work) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         work.title.includes(normalizedQuery) ||
@@ -36,14 +39,14 @@ export function LibraryExperience() {
       const matchesGenre = genre === "ყველა" || work.genreLabel === genre;
       return matchesQuery && matchesGenre;
     });
-  }, [genre, query]);
+  }, [data.works, genre, query]);
 
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
         eyebrow="ბიბლიოთეკა"
         title="ქართული ენისა და ლიტერატურის პროგრამა"
-        description="ავტორები და ნაწარმოებები დალაგებულია საგამოცდო პროგრამის მიხედვით. პირადი პროგრესი გამოჩნდება მხოლოდ მაშინ, როცა მომხმარებელი სწავლას დაიწყებს."
+        description="ავტორები, ნაწარმოებები, შეჯამებები და სასწავლო მასალები ახლა პირდაპირ ცოცხალი ბაზიდან იტვირთება."
         action={<PremiumButton href="/authors">ავტორების ნახვა</PremiumButton>}
       />
 
@@ -57,28 +60,33 @@ export function LibraryExperience() {
         </div>
       </GlassCard>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <GlassCard className="p-5 sm:p-6">
-          <Pill tone="gold">რჩეული ავტორი</Pill>
-          <h3 className="mt-3 font-serif text-3xl text-white">{featuredAuthor.name}</h3>
-          <p className="mt-2 text-sm text-[color:var(--gold-soft)]">{featuredAuthor.periodLabel} • {featuredAuthor.movement}</p>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-[color:var(--muted)]">{featuredAuthor.biography}</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {featuredAuthor.themes.map((theme) => (
-              <Pill key={theme} tone="sky">{theme}</Pill>
-            ))}
-          </div>
-          <div className="mt-6">
-            <PremiumButton href={`/authors/${featuredAuthor.slug}`} variant="secondary">პროფილის გახსნა</PremiumButton>
-          </div>
-        </GlassCard>
+      {data.featuredAuthor ? (
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <GlassCard className="p-5 sm:p-6">
+            <Pill tone="gold">რჩეული ავტორი</Pill>
+            <h3 className="mt-3 font-serif text-3xl text-white">{data.featuredAuthor.name}</h3>
+            <p className="mt-2 text-sm text-[color:var(--gold-soft)]">
+              {data.featuredAuthor.periodLabel} • {data.featuredAuthor.movement}
+            </p>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-[color:var(--muted)]">{data.featuredAuthor.biography}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {data.featuredAuthor.themes.map((theme) => (
+                <Pill key={theme} tone="sky">{theme}</Pill>
+              ))}
+              <Pill tone="rose">{data.featuredAuthor.accessLevelLabel}</Pill>
+            </div>
+            <div className="mt-6">
+              <PremiumButton href={`/authors/${data.featuredAuthor.slug}`} variant="secondary">პროფილის გახსნა</PremiumButton>
+            </div>
+          </GlassCard>
 
-        <EmptyState
-          title="ჯერ არაფერი გაქვთ დაწყებული"
-          description="ბოლო გახსნილი მასალები, შენახული ავტორები და სწავლის პროგრესი გამოჩნდება რეალური გამოყენების შემდეგ."
-          action={<PremiumButton href="/works" variant="secondary">აირჩიეთ ნაწარმოები</PremiumButton>}
-        />
-      </div>
+          <EmptyState
+            title="მასალები ახლდება რეალურ დროში"
+            description="ადმინის მიერ დამატებული ახალი მასალები და შეჯამებები ამ სივრცეში ავტომატურად გამოჩნდება."
+            action={<PremiumButton href="/works" variant="secondary">აირჩიეთ ნაწარმოები</PremiumButton>}
+          />
+        </div>
+      ) : null}
 
       <GlassCard className="p-5 sm:p-6">
         <h3 className="font-serif text-2xl text-white">კატეგორიები</h3>
@@ -110,7 +118,10 @@ export function LibraryExperience() {
                     <div className="min-w-0">
                       <p className="text-lg font-semibold text-white">{author.name}</p>
                       <p className="mt-1 text-xs text-[color:var(--muted)]">{author.periodLabel} • {author.movement}</p>
-                      <p className="mt-2 text-xs text-[color:var(--gold-soft)]">{author.works.length} ნაწარმოები</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Pill tone="gold">{author.works.length} ნაწარმოები</Pill>
+                        <Pill tone="rose">{author.accessLevelLabel}</Pill>
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -130,11 +141,6 @@ export function LibraryExperience() {
             );
           })}
         </div>
-        {filteredAuthors.length === 0 ? (
-          <div className="mt-5">
-            <EmptyState title="აირჩიეთ ავტორი" description="ამ ძებნით ავტორი ვერ მოიძებნა. სცადეთ გვარი, პერიოდი ან ნაწარმოების სათაური." />
-          </div>
-        ) : null}
       </GlassCard>
 
       <GlassCard id="works" className="p-5 sm:p-6">
@@ -150,7 +156,10 @@ export function LibraryExperience() {
                   <p className="font-semibold text-white">{work.title}</p>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">{work.author}</p>
                 </div>
-                <Pill>{work.genreLabel}</Pill>
+                <div className="flex flex-wrap gap-2">
+                  <Pill>{work.genreLabel}</Pill>
+                  <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                </div>
               </div>
               <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
             </Link>

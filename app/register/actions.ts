@@ -6,15 +6,26 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { createClient } from "@/src/lib/supabase/server";
 
 export async function registerUser(_: string | null, formData: FormData) {
+  const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+  const role = getRoleForEmail(email);
 
-  if (!email || !password) {
-    return "შეიყვანეთ ელფოსტა და პაროლი.";
+  if (!fullName || !email || !password || !confirmPassword) {
+    return "შეავსეთ ყველა სავალდებულო ველი.";
+  }
+
+  if (fullName.length < 2) {
+    return "სახელი უნდა შეიცავდეს მინიმუმ 2 სიმბოლოს.";
   }
 
   if (password.length < 6) {
     return "პაროლი უნდა შედგებოდეს მინიმუმ 6 სიმბოლოსგან.";
+  }
+
+  if (password !== confirmPassword) {
+    return "პაროლები ერთმანეთს არ ემთხვევა.";
   }
 
   try {
@@ -26,6 +37,9 @@ export async function registerUser(_: string | null, formData: FormData) {
       email,
       password,
       options: {
+        data: {
+          full_name: fullName,
+        },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/dashboard`,
       },
     });
@@ -39,10 +53,9 @@ export async function registerUser(_: string | null, formData: FormData) {
     }
 
     const adminClient = createAdminClient();
-    const role = getRoleForEmail(email);
-
     const { error: profileError } = await adminClient.from("profiles").upsert({
       id: user.id,
+      full_name: fullName,
       email,
       role,
     });
@@ -54,7 +67,7 @@ export async function registerUser(_: string | null, formData: FormData) {
     return "ავტორიზაციის სერვისთან დაკავშირება ვერ მოხერხდა. სცადეთ თავიდან.";
   }
 
-  redirect("/dashboard");
+  redirect(role === "admin" ? "/admin" : "/dashboard");
 }
 
 function getAuthErrorMessage(message: string) {

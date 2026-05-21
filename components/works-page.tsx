@@ -21,7 +21,10 @@ export function WorksPage({ works }: { works: WorkProfiles }) {
                   <h3 className="font-serif text-2xl text-white">{work.title}</h3>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">{work.author}</p>
                 </div>
-                <Pill>{work.genreLabel}</Pill>
+                <div className="flex flex-wrap gap-2">
+                  <Pill>{work.genreLabel}</Pill>
+                  <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                </div>
               </div>
               <p className="mt-4 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
               <div className="mt-4 flex flex-wrap gap-2">

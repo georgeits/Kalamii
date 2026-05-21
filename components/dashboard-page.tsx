@@ -1,20 +1,23 @@
 import { emptyStudentState } from "@/data/dashboard";
 import { libraryCategories } from "@/data/library";
 import { EmptyState, GlassCard, PremiumButton, SectionTitle, Surface } from "@/components/ui";
+import type { ProfileRecord } from "@/src/lib/content";
 
-export function DashboardPage() {
+export function DashboardPage({ profile }: { profile: ProfileRecord }) {
+  const displayName = profile.full_name?.trim() || profile.email;
+
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
         eyebrow="სამუშაო სივრცე"
-        title="მთავარი პანელი"
+        title={`მოგესალმებით, ${displayName}`}
         description="აქ გამოჩნდება თქვენი სასწავლო პროგრესი, ბოლო აქტივობა და ტესტების შედეგები მას შემდეგ, რაც პლატფორმაზე მუშაობას დაიწყებთ."
         action={<PremiumButton href="/library">ბიბლიოთეკის გახსნა</PremiumButton>}
       />
 
       <EmptyState
         title={emptyStudentState.title}
-        description={emptyStudentState.description}
+        description={`${emptyStudentState.description} პროფილის ტიპი: ${profile.role === "admin" ? "ადმინისტრატორი" : "მომხმარებელი"}.`}
         action={<PremiumButton href="/authors" variant="secondary">აირჩიეთ ავტორი</PremiumButton>}
       />
 

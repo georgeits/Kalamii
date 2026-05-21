@@ -26,6 +26,7 @@ export function AuthorsPage({ authors }: { authors: AuthorList }) {
                   <p className="mt-3 line-clamp-3 text-sm leading-6 text-[color:var(--muted)]">{author.biography}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Pill tone="gold">{author.works.length} ნაწარმოები</Pill>
+                    <Pill tone="rose">{author.accessLevelLabel}</Pill>
                     {author.themes.slice(0, 2).map((theme) => (
                       <Pill key={theme} tone="sky">{theme}</Pill>
                     ))}

@@ -1,21 +1,17 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { DashboardPage } from "@/components/dashboard-page";
-import { createClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/lib/content";
 
 export default async function Dashboard() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
     redirect("/login");
   }
 
   return (
     <AppShell currentPath="/dashboard">
-      <DashboardPage />
+      <DashboardPage profile={profile} />
     </AppShell>
   );
 }

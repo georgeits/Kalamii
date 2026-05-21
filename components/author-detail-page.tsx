@@ -21,6 +21,7 @@ export function AuthorDetailPage({ author }: { author: AuthorDetail }) {
           <h3 className="font-serif text-2xl text-white">ძირითადი თემები</h3>
           <div className="mt-4 flex flex-wrap gap-2">
             {author.themes.map((theme) => <Pill key={theme} tone="sky">{theme}</Pill>)}
+            <Pill tone="rose">{author.accessLevelLabel}</Pill>
           </div>
           <div className="mt-6">
             <PremiumButton href="/quiz" variant="secondary">ტესტები ჯერ არ გაქვთ გავლილი</PremiumButton>
@@ -44,12 +45,28 @@ export function AuthorDetailPage({ author }: { author: AuthorDetail }) {
       <GlassCard className="p-6">
         <h3 className="font-serif text-2xl text-white">სასწავლო მასალები</h3>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {["ბიოგრაფია", "თემები", "ნაწარმოებები"].map((item) => (
-            <Surface key={item} className="p-4">
-              <p className="font-semibold text-white">{item}</p>
-              <p className="mt-2 text-sm text-[color:var(--muted)]">დამატებითი კონსპექტები გამოჩნდება კონტენტის დამატების შემდეგ.</p>
-            </Surface>
-          ))}
+          {author.materials.length > 0 ? (
+            author.materials.map((item) => (
+              <Surface key={item.id} className="p-4">
+                <p className="font-semibold text-white">{item.title}</p>
+                <p className="mt-2 text-sm text-[color:var(--muted)]">{item.description}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Pill tone="gold">{item.material_type}</Pill>
+                  <Pill tone="rose">{item.access_level}</Pill>
+                </div>
+                <a href={item.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex text-sm text-[color:var(--gold-soft)]">
+                  გახსნა
+                </a>
+              </Surface>
+            ))
+          ) : (
+            ["ბიოგრაფია", "თემები", "ნაწარმოებები"].map((item) => (
+              <Surface key={item} className="p-4">
+                <p className="font-semibold text-white">{item}</p>
+                <p className="mt-2 text-sm text-[color:var(--muted)]">დამატებითი კონსპექტები გამოჩნდება კონტენტის დამატების შემდეგ.</p>
+              </Surface>
+            ))
+          )}
         </div>
       </GlassCard>
     </main>

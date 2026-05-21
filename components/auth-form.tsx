@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { ADMIN_EMAIL } from "@/src/lib/auth";
 import { createClient } from "@/src/lib/supabase/client";
 
 export function AuthForm() {
@@ -39,7 +40,18 @@ export function AuthForm() {
       }
 
       const redirectedFrom = searchParams.get("redirectedFrom");
-      router.replace(redirectedFrom || "/dashboard");
+      const { data: profileResult } = await supabase
+        .from("profiles")
+        .select("role, email")
+        .eq("id", result.data.user.id)
+        .maybeSingle();
+
+      const isAdmin =
+        profileResult?.role === "admin" ||
+        profileResult?.email?.toLowerCase() === ADMIN_EMAIL ||
+        result.data.user.email?.toLowerCase() === ADMIN_EMAIL;
+
+      router.replace(redirectedFrom || (isAdmin ? "/admin" : "/dashboard"));
       router.refresh();
     } catch {
       setErrorMessage("ავტორიზაციის სერვისთან დაკავშირება ვერ მოხერხდა. სცადეთ თავიდან.");

@@ -10,6 +10,17 @@ export function RegisterForm() {
   return (
     <form action={action} className="mt-8 space-y-4">
       <label className="block">
+        <span className="text-sm text-[color:var(--muted)]">სრული სახელი</span>
+        <input
+          type="text"
+          name="full_name"
+          autoComplete="name"
+          placeholder="გიორგი ჯავახიშვილი"
+          className="mt-2 h-12 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition placeholder:text-[color:var(--muted)] focus:border-[rgba(244,177,93,0.45)]"
+        />
+      </label>
+
+      <label className="block">
         <span className="text-sm text-[color:var(--muted)]">ელფოსტა</span>
         <input
           type="email"
@@ -27,6 +38,17 @@ export function RegisterForm() {
           name="password"
           autoComplete="new-password"
           placeholder="მინიმუმ 6 სიმბოლო"
+          className="mt-2 h-12 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition placeholder:text-[color:var(--muted)] focus:border-[rgba(244,177,93,0.45)]"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-sm text-[color:var(--muted)]">გაიმეორეთ პაროლი</span>
+        <input
+          type="password"
+          name="confirm_password"
+          autoComplete="new-password"
+          placeholder="გაიმეორეთ პაროლი"
           className="mt-2 h-12 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none transition placeholder:text-[color:var(--muted)] focus:border-[rgba(244,177,93,0.45)]"
         />
       </label>

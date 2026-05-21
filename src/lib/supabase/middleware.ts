@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { ADMIN_EMAIL } from "@/src/lib/auth";
 
-const protectedRoutes = ["/dashboard", "/admin"];
+const protectedRoutes = ["/dashboard", "/admin", "/profile"];
 const authRoutes = ["/login", "/register"];
 
 export async function updateSession(request: NextRequest) {
@@ -44,8 +45,19 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (isAuthRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, email")
+      .eq("id", user.id)
+      .maybeSingle();
+
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    const isAdmin =
+      profile?.role === "admin" ||
+      profile?.email?.toLowerCase() === ADMIN_EMAIL ||
+      user.email?.toLowerCase() === ADMIN_EMAIL;
+
+    redirectUrl.pathname = isAdmin ? "/admin" : "/dashboard";
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

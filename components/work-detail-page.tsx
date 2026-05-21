@@ -11,7 +11,12 @@ export function WorkDetailPage({ work }: { work: WorkDetail }) {
           eyebrow={`${work.author} • ${work.genreLabel}`}
           title={work.title}
           description={work.summary}
-          action={<Pill tone="gold">{work.periodLabel}</Pill>}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Pill tone="gold">{work.periodLabel}</Pill>
+              <Pill tone="rose">{work.accessLevelLabel}</Pill>
+            </div>
+          }
         />
       </GlassCard>
 
@@ -35,9 +40,48 @@ export function WorkDetailPage({ work }: { work: WorkDetail }) {
 
       <GlassCard className="p-6">
         <h3 className="font-serif text-2xl text-white">დეტალური ანალიზი</h3>
-        <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-          დეტალური ანალიზის სრული ტექსტი დაემატება ადმინისტრატორის მიერ. ამ ეტაპზე გვერდი აჩვენებს მხოლოდ საგამოცდო პროგრამის სტრუქტურულ ინფორმაციას: ავტორს, ჟანრს, მოკლე შინაარსს, თემებს და ანალიზის საყრდენ საკითხებს.
-        </p>
+        {work.summaries.length > 0 ? (
+          <div className="mt-5 space-y-4">
+            {work.summaries.map((summary) => (
+              <Surface key={summary.id} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-white">{summary.title}</p>
+                  <Pill tone="rose">{summary.access_level}</Pill>
+                </div>
+                <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{summary.body}</p>
+              </Surface>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
+            დეტალური ანალიზის სრული ტექსტი დაემატება ადმინისტრატორის მიერ. ამ ეტაპზე გვერდი აჩვენებს მხოლოდ საგამოცდო პროგრამის სტრუქტურულ ინფორმაციას: ავტორს, ჟანრს, მოკლე შინაარსს, თემებს და ანალიზის საყრდენ საკითხებს.
+          </p>
+        )}
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h3 className="font-serif text-2xl text-white">სასწავლო მასალები</h3>
+        {work.materials.length > 0 ? (
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {work.materials.map((material) => (
+              <Surface key={material.id} className="p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-white">{material.title}</p>
+                  <Pill tone="gold">{material.material_type}</Pill>
+                  <Pill tone="rose">{material.access_level}</Pill>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{material.description}</p>
+                <a href={material.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex text-sm text-[color:var(--gold-soft)]">
+                  მასალის გახსნა
+                </a>
+              </Surface>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
+            სასწავლო მასალები დაემატება ადმინისტრატორის მიერ და ავტომატურად გამოჩნდება ამ ნაწარმოების გვერდზე.
+          </p>
+        )}
       </GlassCard>
     </main>
   );

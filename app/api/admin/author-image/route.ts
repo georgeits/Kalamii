@@ -1,9 +1,20 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import { ADMIN_EMAIL } from "@/src/lib/auth";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { createClient } from "@/src/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
+    const supabaseUser = await createClient();
+    const {
+      data: { user },
+    } = await supabaseUser.auth.getUser();
+
+    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
+      return NextResponse.json({ error: "წვდომა აკრძალულია." }, { status: 403 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     const authorId = String(formData.get("authorId") ?? "draft").trim() || "draft";

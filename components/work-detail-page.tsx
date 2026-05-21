@@ -1,34 +1,41 @@
+import { AuthorPortrait } from "@/components/author-portrait";
+import { WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
 import type { getWorkDetail } from "@/src/lib/content";
 
 type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
 
-export function WorkDetailPage({ work }: { work: WorkDetail }) {
+export function WorkDetailPage({ work, isAdmin }: { work: WorkDetail; isAdmin: boolean }) {
   return (
     <main className="space-y-6 pb-8">
       <GlassCard className="p-6 sm:p-8">
-        <SectionTitle
-          eyebrow={`${work.author} • ${work.genreLabel}`}
-          title={work.title}
-          description={work.summary}
-          action={
-            <div className="flex flex-wrap gap-2">
-              <Pill tone="gold">{work.periodLabel}</Pill>
-              <Pill tone="rose">{work.accessLevelLabel}</Pill>
-            </div>
-          }
-        />
+        <div className="grid gap-6 lg:grid-cols-[120px_1fr]">
+          <AuthorPortrait name={work.author} imageUrl={work.authorImageUrl} className="aspect-[4/5]" />
+          <div>
+            <SectionTitle
+              eyebrow={`${work.author} • ${work.genreLabel}`}
+              title={work.title}
+              description={work.summary}
+              action={
+                <div className="flex flex-wrap gap-2">
+                  <Pill tone="gold">{work.periodLabel}</Pill>
+                  <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                </div>
+              }
+            />
+            {isAdmin ? <WorkInlineEditor work={work} /> : null}
+          </div>
+        </div>
       </GlassCard>
 
-      <ContentSection title="1. სასწავლო მასალა" body={work.content?.study_material_body} />
-      <ContentSection title="2. გეგმა" body={work.content?.plan_body} />
-      <ContentSection title="3. შინაარსი" body={work.content?.summary_body} />
-      <ContentSection title="4. ანალიზი" body={work.content?.analysis_body} />
+      <ContentSection title="1. გეგმა" body={work.plan} />
+      <ContentSection title="2. შინაარსი" body={work.summary} />
+      <ContentSection title="3. ანალიზი" body={work.analysis} />
       <GlassCard className="p-6">
-        <h3 className="font-serif text-2xl text-white">5. ტესტი</h3>
-        {work.content?.quiz_questions?.length ? (
+        <h3 className="font-serif text-2xl text-white">4. ტესტი</h3>
+        {work.quiz_data?.length ? (
           <div className="mt-5 space-y-3">
-            {work.content.quiz_questions.map((item, index) => (
+            {work.quiz_data.map((item, index) => (
               <Surface key={`${item.question}-${index}`} className="p-4">
                 <p className="text-sm leading-7 text-white">{index + 1}. {item.question}</p>
               </Surface>

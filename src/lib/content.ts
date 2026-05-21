@@ -6,6 +6,10 @@ import { createClient } from "@/src/lib/supabase/server";
 
 export type AccessLevel = "free" | "standard" | "premium";
 
+export type QuizQuestion = {
+  question: string;
+};
+
 export type ProfileRecord = {
   id: string;
   full_name: string | null;
@@ -34,6 +38,9 @@ export type WorkRecord = {
   author_id: string;
   genre: keyof typeof genres;
   summary: string;
+  plan?: string | null;
+  analysis?: string | null;
+  quiz_data?: QuizQuestion[] | null;
   themes: string[];
   characters: string[];
   symbols: string[];
@@ -43,49 +50,8 @@ export type WorkRecord = {
   updated_at?: string;
 };
 
-export type SummaryRecord = {
-  id: string;
-  work_id: string;
-  title: string;
-  body: string;
-  access_level: AccessLevel;
-  created_at?: string;
-  updated_at?: string;
-};
-
-export type StudyMaterialRecord = {
-  id: string;
-  title: string;
-  description: string;
-  material_type: string;
-  url: string;
-  body?: string | null;
-  author_id: string | null;
-  work_id: string | null;
-  access_level: AccessLevel;
-  created_at?: string;
-  updated_at?: string;
-};
-
-export type WorkContentRecord = {
-  id: string;
-  work_id: string;
-  study_material_body: string | null;
-  plan_body: string | null;
-  summary_body: string | null;
-  analysis_body: string | null;
-  quiz_questions: { question: string }[];
-  created_at?: string;
-  updated_at?: string;
-};
-
 type WorkWithAuthor = WorkRecord & {
-  author: Pick<AuthorRecord, "id" | "name" | "period" | "movement"> | null;
-};
-
-type MaterialWithRelations = StudyMaterialRecord & {
-  author: Pick<AuthorRecord, "id" | "name" | "slug"> | null;
-  work: Pick<WorkRecord, "id" | "title" | "slug"> | null;
+  author: Pick<AuthorRecord, "id" | "name" | "period" | "movement" | "image_url"> | null;
 };
 
 function fallbackAuthorRows(): AuthorRecord[] {
@@ -115,6 +81,9 @@ function fallbackWorkRows(): WorkWithAuthor[] {
       author_id: author?.id ?? `fallback-author-${index}`,
       genre: work.genre,
       summary: work.summary,
+      plan: null,
+      analysis: null,
+      quiz_data: [],
       themes: work.themes,
       characters: work.characters,
       symbols: work.symbols,
@@ -126,6 +95,7 @@ function fallbackWorkRows(): WorkWithAuthor[] {
             name: author.name,
             period: author.period,
             movement: author.movement,
+            image_url: author.image_url,
           }
         : null,
     };
@@ -163,7 +133,7 @@ export async function getCurrentProfile() {
   if (profile) {
     return {
       ...profile,
-      role: (profile.role === "admin" || isAdminEmail(profile.email)) ? "admin" : "user",
+      role: profile.role === "admin" || isAdminEmail(profile.email) ? "admin" : "user",
     } as ProfileRecord;
   }
 
@@ -190,7 +160,7 @@ export async function getWorks() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("works")
-    .select("*, author:authors(id, name, period, movement)")
+    .select("*, author:authors(id, name, period, movement, image_url)")
     .order("title");
 
   if (error || !data?.length) {
@@ -198,42 +168,6 @@ export async function getWorks() {
   }
 
   return data as WorkWithAuthor[];
-}
-
-export async function getSummaries() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("summaries").select("*").order("created_at");
-
-  if (error || !data) {
-    return [] as SummaryRecord[];
-  }
-
-  return data as SummaryRecord[];
-}
-
-export async function getStudyMaterials() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("study_materials")
-    .select("*, author:authors(id, name, slug), work:works(id, title, slug)")
-    .order("created_at");
-
-  if (error || !data) {
-    return [] as MaterialWithRelations[];
-  }
-
-  return data as MaterialWithRelations[];
-}
-
-export async function getWorkContents() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("work_contents").select("*").order("created_at");
-
-  if (error || !data) {
-    return [] as WorkContentRecord[];
-  }
-
-  return data as WorkContentRecord[];
 }
 
 export async function getAuthorsWithWorks() {
@@ -254,17 +188,8 @@ export async function getAuthorsWithWorks() {
 }
 
 export async function getAuthorDetail(slug: string) {
-  const [authors, materials] = await Promise.all([getAuthorsWithWorks(), getStudyMaterials()]);
-  const author = authors.find((item) => item.slug === slug) ?? null;
-
-  if (!author) {
-    return null;
-  }
-
-  return {
-    ...author,
-    materials: materials.filter((material) => material.author?.id === author.id),
-  };
+  const authors = await getAuthorsWithWorks();
+  return authors.find((item) => item.slug === slug) ?? null;
 }
 
 export async function getWorkProfiles() {
@@ -272,8 +197,8 @@ export async function getWorkProfiles() {
 
   return works.map((work) => ({
     ...work,
-    examTips: work.exam_tips,
     author: work.author?.name ?? "უცნობი ავტორი",
+    authorImageUrl: work.author?.image_url ?? null,
     genreLabel: genres[work.genre],
     periodLabel: work.author ? literaryPeriods[work.author.period] : "",
     movement: work.author?.movement ?? "",
@@ -282,40 +207,30 @@ export async function getWorkProfiles() {
 }
 
 export async function getWorkDetail(slug: string) {
-  const [works, summaries, materials, contents] = await Promise.all([getWorks(), getSummaries(), getStudyMaterials(), getWorkContents()]);
+  const works = await getWorks();
   const work = works.find((item) => item.slug === slug);
 
   if (!work) {
     return null;
   }
 
-  const content = contents.find((item) => item.work_id === work.id) ?? null;
-
   return {
     ...work,
-    examTips: work.exam_tips,
     author: work.author?.name ?? "უცნობი ავტორი",
+    authorImageUrl: work.author?.image_url ?? null,
     genreLabel: genres[work.genre],
     periodLabel: work.author ? literaryPeriods[work.author.period] : "",
     movement: work.author?.movement ?? "",
     accessLevelLabel: getAccessLevelLabel(work.access_level),
-    summaries: summaries.filter((summary) => summary.work_id === work.id),
-    materials: materials.filter((material) => material.work?.id === work.id || material.work_id === work.id),
-    content,
   };
 }
 
 export async function getLibraryData() {
-  const [authors, works, materials] = await Promise.all([
-    getAuthorsWithWorks(),
-    getWorkProfiles(),
-    getStudyMaterials(),
-  ]);
+  const [authors, works] = await Promise.all([getAuthorsWithWorks(), getWorkProfiles()]);
 
   return {
     authors,
     works,
-    materials,
     featuredAuthor: authors.find((author) => author.slug === "ilia-chavchavadze") ?? authors[0] ?? null,
   };
 }
@@ -326,16 +241,6 @@ export function getAuthorPeriodOptions() {
 
 export function getGenreOptions() {
   return Object.entries(genres).map(([value, label]) => ({ value, label }));
-}
-
-export function getMaterialTypeOptions() {
-  return [
-    { value: "summary-sheet", label: "შეჯამების ფაილი" },
-    { value: "analysis", label: "ანალიზი" },
-    { value: "worksheet", label: "სავარჯიშო" },
-    { value: "essay-plan", label: "ესეს გეგმა" },
-    { value: "pdf", label: "PDF მასალა" },
-  ];
 }
 
 export { ADMIN_EMAIL };

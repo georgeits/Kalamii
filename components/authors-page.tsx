@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { AuthorPortrait } from "@/components/author-portrait";
+import { AuthorInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { getAuthorsWithWorks } from "@/src/lib/content";
 
 type AuthorList = Awaited<ReturnType<typeof getAuthorsWithWorks>>;
 
-export function AuthorsPage({ authors }: { authors: AuthorList }) {
+export function AuthorsPage({ authors, isAdmin }: { authors: AuthorList; isAdmin: boolean }) {
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
@@ -15,8 +16,8 @@ export function AuthorsPage({ authors }: { authors: AuthorList }) {
       />
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {authors.map((author) => (
-          <Link key={author.slug} href={`/authors/${author.slug}`}>
-            <GlassCard className="h-full p-5 transition hover:-translate-y-1">
+          <GlassCard key={author.slug} className="h-full p-5 transition hover:-translate-y-1">
+            <Link href={`/authors/${author.slug}`}>
               <div className="flex items-start gap-4">
                 <AuthorPortrait name={author.name} imageUrl={author.image_url} className="h-16 w-16 shrink-0 rounded-[20px]" />
                 <div className="min-w-0">
@@ -32,8 +33,9 @@ export function AuthorsPage({ authors }: { authors: AuthorList }) {
                   </div>
                 </div>
               </div>
-            </GlassCard>
-          </Link>
+            </Link>
+            {isAdmin ? <div className="mt-4"><AuthorInlineEditor author={author} compact /></div> : null}
+          </GlassCard>
         ))}
       </div>
     </main>

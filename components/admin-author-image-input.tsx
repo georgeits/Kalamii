@@ -6,9 +6,10 @@ import { useId, useState } from "react";
 type AdminAuthorImageInputProps = {
   authorId?: string;
   currentImageUrl?: string | null;
+  onUploaded?: (imageUrl: string) => void;
 };
 
-export function AdminAuthorImageInput({ authorId, currentImageUrl }: AdminAuthorImageInputProps) {
+export function AdminAuthorImageInput({ authorId, currentImageUrl, onUploaded }: AdminAuthorImageInputProps) {
   const inputId = useId();
   const [imageUrl, setImageUrl] = useState(currentImageUrl ?? "");
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl ?? "");
@@ -44,6 +45,7 @@ export function AdminAuthorImageInput({ authorId, currentImageUrl }: AdminAuthor
 
       setImageUrl(payload.imageUrl);
       setPreviewUrl(payload.imageUrl);
+      onUploaded?.(payload.imageUrl);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "სურათის ატვირთვა ვერ მოხერხდა.");
     } finally {

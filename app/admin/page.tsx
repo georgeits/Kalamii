@@ -8,9 +8,6 @@ import {
   getAuthorPeriodOptions,
   getCurrentProfile,
   getGenreOptions,
-  getMaterialTypeOptions,
-  getStudyMaterials,
-  getWorkContents,
   getWorks,
 } from "@/src/lib/content";
 
@@ -25,11 +22,9 @@ export default async function Admin() {
     redirect("/dashboard");
   }
 
-  const [authors, works, studyMaterials, workContents] = await Promise.all([
+  const [authors, works] = await Promise.all([
     getAuthors(),
     getWorks(),
-    getStudyMaterials(),
-    getWorkContents(),
   ]);
 
   return (
@@ -37,12 +32,9 @@ export default async function Admin() {
       <AdminPage
         authors={authors}
         works={works}
-        studyMaterials={studyMaterials}
-        workContents={workContents}
         authorPeriodOptions={getAuthorPeriodOptions()}
         genreOptions={getGenreOptions()}
         accessLevelOptions={getAccessLevelOptions()}
-        materialTypeOptions={getMaterialTypeOptions()}
       />
     </AppShell>
   );

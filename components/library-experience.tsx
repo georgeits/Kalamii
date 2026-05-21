@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { AuthorPortrait } from "@/components/author-portrait";
+import { AuthorInlineEditor, WorkInlineEditor } from "@/components/public-inline-editors";
 import { genreTabs, libraryCategories, periodTabs } from "@/data/library";
 import { EmptyState, GlassCard, Pill, PremiumButton, SearchBar, SectionTitle, Surface, Tabs } from "@/components/ui";
 import type { getLibraryData } from "@/src/lib/content";
 
 type LibraryData = Awaited<ReturnType<typeof getLibraryData>>;
 
-export function LibraryExperience({ data }: { data: LibraryData }) {
+export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmin: boolean }) {
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("ყველა");
   const [genre, setGenre] = useState("ყველა");
@@ -46,7 +48,7 @@ export function LibraryExperience({ data }: { data: LibraryData }) {
       <SectionTitle
         eyebrow="ბიბლიოთეკა"
         title="ქართული ენისა და ლიტერატურის პროგრამა"
-        description="ავტორები, ნაწარმოებები, შეჯამებები და სასწავლო მასალები ახლა პირდაპირ ცოცხალი ბაზიდან იტვირთება."
+        description="ავტორები და ნაწარმოებები ახლა პირდაპირ ცოცხალი ბაზიდან იტვირთება."
         action={<PremiumButton href="/authors">ავტორების ნახვა</PremiumButton>}
       />
 
@@ -112,9 +114,7 @@ export function LibraryExperience({ data }: { data: LibraryData }) {
               <article key={author.slug} className="rounded-[20px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:bg-white/[0.07]">
                 <button className="w-full text-left" onClick={() => setOpenAuthor(expanded ? "" : author.slug)}>
                   <div className="flex items-start gap-4">
-                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[18px] border border-[color:var(--line)] bg-white/[0.05] font-serif text-xl text-[color:var(--gold-soft)]">
-                      {author.name.slice(0, 1)}
-                    </div>
+                    <AuthorPortrait name={author.name} imageUrl={author.image_url} className="h-14 w-14 shrink-0 rounded-[18px]" />
                     <div className="min-w-0">
                       <p className="text-lg font-semibold text-white">{author.name}</p>
                       <p className="mt-1 text-xs text-[color:var(--muted)]">{author.periodLabel} • {author.movement}</p>
@@ -128,16 +128,17 @@ export function LibraryExperience({ data }: { data: LibraryData }) {
                 {expanded ? (
                   <div className="mt-4 border-t border-[color:var(--line)] pt-4">
                     <p className="text-sm leading-6 text-[color:var(--muted)]">{author.biography}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {author.works.map((work) => (
-                        <Link key={work.slug} href={`/works/${work.slug}`} className="rounded-full border border-[color:var(--line)] px-3 py-1.5 text-xs text-white transition hover:bg-white/8">
-                          {work.title}
-                        </Link>
-                      ))}
-                    </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {author.works.map((work) => (
+                      <Link key={work.slug} href={`/works/${work.slug}`} className="rounded-full border border-[color:var(--line)] px-3 py-1.5 text-xs text-white transition hover:bg-white/8">
+                        {work.title}
+                      </Link>
+                    ))}
                   </div>
-                ) : null}
-              </article>
+                  {isAdmin ? <AuthorInlineEditor author={author} compact /> : null}
+                </div>
+              ) : null}
+            </article>
             );
           })}
         </div>
@@ -150,19 +151,22 @@ export function LibraryExperience({ data }: { data: LibraryData }) {
         </div>
         <div className="mt-5 grid gap-3 xl:grid-cols-2">
           {filteredWorks.map((work) => (
-            <Link key={work.slug} href={`/works/${work.slug}`} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:bg-white/[0.07]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-semibold text-white">{work.title}</p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">{work.author}</p>
+            <div key={work.slug} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4 transition hover:-translate-y-1 hover:bg-white/[0.07]">
+              <Link href={`/works/${work.slug}`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-white">{work.title}</p>
+                    <p className="mt-1 text-sm text-[color:var(--muted)]">{work.author}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Pill>{work.genreLabel}</Pill>
+                    <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Pill>{work.genreLabel}</Pill>
-                  <Pill tone="rose">{work.accessLevelLabel}</Pill>
-                </div>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
-            </Link>
+                <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
+              </Link>
+              {isAdmin ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+            </div>
           ))}
         </div>
       </GlassCard>

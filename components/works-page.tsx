@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { getWorkProfiles } from "@/src/lib/content";
 
 type WorkProfiles = Awaited<ReturnType<typeof getWorkProfiles>>;
 
-export function WorksPage({ works }: { works: WorkProfiles }) {
+export function WorksPage({ works, isAdmin }: { works: WorkProfiles; isAdmin: boolean }) {
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
@@ -14,8 +15,8 @@ export function WorksPage({ works }: { works: WorkProfiles }) {
       />
       <div className="grid gap-4 xl:grid-cols-2">
         {works.map((work) => (
-          <Link key={work.slug} href={`/works/${work.slug}`}>
-            <GlassCard className="h-full p-5 transition hover:-translate-y-1">
+          <GlassCard key={work.slug} className="h-full p-5 transition hover:-translate-y-1">
+            <Link href={`/works/${work.slug}`}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="font-serif text-2xl text-white">{work.title}</h3>
@@ -32,8 +33,9 @@ export function WorksPage({ works }: { works: WorkProfiles }) {
                   <Pill key={theme} tone="sky">{theme}</Pill>
                 ))}
               </div>
-            </GlassCard>
-          </Link>
+            </Link>
+            {isAdmin ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+          </GlassCard>
         ))}
       </div>
     </main>

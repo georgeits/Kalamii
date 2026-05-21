@@ -119,15 +119,16 @@ function ChapterSection({ chapters }: { chapters: WorkDetail["summary_chapters"]
 }
 
 function QuizSection({ questions }: { questions: QuizQuestion[] }) {
+  const [attempt, setAttempt] = useState(0);
   const normalizedQuestions = useMemo(
     () =>
       questions
         .filter((question) => question.question?.trim() && question.options?.length === 4)
         .map((question) => ({
           ...question,
-          options: shuffleArray(question.options ?? []),
+          options: shuffleArray(question.options ?? [], attempt),
         })),
-    [questions],
+    [questions, attempt],
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -137,6 +138,7 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
   const currentQuestion = normalizedQuestions[currentIndex];
   const finished = normalizedQuestions.length > 0 && Object.keys(answers).length === normalizedQuestions.length;
   const score = Object.values(answers).filter(Boolean).length;
+  const percentage = normalizedQuestions.length > 0 ? Math.round((score / normalizedQuestions.length) * 100) : 0;
 
   function choose(optionId: string, isCorrect: boolean) {
     if (selectedOptionId) return;
@@ -153,6 +155,7 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
     setSelectedOptionId(null);
     setCurrentIndex(0);
     setAnswers({});
+    setAttempt((value) => value + 1);
   }
 
   return (
@@ -164,6 +167,7 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
         <div className="mt-5 space-y-4">
           <Surface className="p-5">
             <p className="text-lg font-semibold text-white">{`თქვენი შედეგი: ${score} / ${normalizedQuestions.length}`}</p>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">{`სიზუსტე: ${percentage}%`}</p>
           </Surface>
           <button type="button" onClick={resetQuiz} className="premium-button rounded-full px-5 py-2 text-sm font-bold text-[#160f08]">
             თავიდან გავლა
@@ -222,10 +226,12 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
   );
 }
 
-function shuffleArray<T>(items: T[]) {
+function shuffleArray<T>(items: T[], seed: number) {
   const clone = [...items];
+  let state = seed + clone.length * 17 + 7;
   for (let index = clone.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    const swapIndex = Math.floor((state / 4294967296) * (index + 1));
     [clone[index], clone[swapIndex]] = [clone[swapIndex], clone[index]];
   }
   return clone;

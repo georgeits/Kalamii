@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
+import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
 import type { getWorkProfiles } from "@/src/lib/content";
 
 type WorkProfiles = Awaited<ReturnType<typeof getWorkProfiles>>;
@@ -25,6 +26,7 @@ export function WorksPage({ works, isAdmin }: { works: WorkProfiles; isAdmin: bo
                 <div className="flex flex-wrap gap-2">
                   <Pill>{work.genreLabel}</Pill>
                   <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                  {work.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
                 </div>
               </div>
               <p className="mt-4 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
@@ -34,7 +36,8 @@ export function WorksPage({ works, isAdmin }: { works: WorkProfiles; isAdmin: bo
                 ))}
               </div>
             </Link>
-            {isAdmin ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+            {isAdmin && !work.is_demo ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+            {isAdmin && work.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
           </GlassCard>
         ))}
       </div>

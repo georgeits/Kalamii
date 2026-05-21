@@ -39,6 +39,7 @@ export type AuthorRecord = {
   themes: string[];
   image_url?: string | null;
   access_level: AccessLevel;
+  is_demo?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -59,12 +60,18 @@ export type WorkRecord = {
   symbols: string[];
   exam_tips: string[];
   access_level: AccessLevel;
+  is_demo?: boolean;
   created_at?: string;
   updated_at?: string;
 };
 
 type WorkWithAuthor = WorkRecord & {
   author: Pick<AuthorRecord, "id" | "name" | "period" | "movement" | "image_url"> | null;
+};
+
+type CatalogData = {
+  authors: AuthorRecord[];
+  works: WorkWithAuthor[];
 };
 
 function fallbackAuthorRows(): AuthorRecord[] {
@@ -78,6 +85,7 @@ function fallbackAuthorRows(): AuthorRecord[] {
     themes: author.themes,
     image_url: null,
     access_level: "free",
+    is_demo: true,
   }));
 }
 
@@ -103,6 +111,7 @@ function fallbackWorkRows(): WorkWithAuthor[] {
       symbols: work.symbols,
       exam_tips: work.examTips,
       access_level: "free",
+      is_demo: true,
       author: author
         ? {
             id: author.id,
@@ -114,6 +123,37 @@ function fallbackWorkRows(): WorkWithAuthor[] {
         : null,
     };
   });
+}
+
+async function loadCatalogData(): Promise<CatalogData> {
+  const supabase = await createClient();
+  const [{ data: authorsData, error: authorsError }, { data: worksData, error: worksError }] =
+    await Promise.all([
+      supabase.from("authors").select("*").order("name"),
+      supabase
+        .from("works")
+        .select("*, author:authors(id, name, period, movement, image_url)")
+        .order("title"),
+    ]);
+
+  if (authorsError || worksError) {
+    return {
+      authors: fallbackAuthorRows(),
+      works: fallbackWorkRows(),
+    };
+  }
+
+  const authors = (authorsData ?? []) as AuthorRecord[];
+  const works = (worksData ?? []) as WorkWithAuthor[];
+
+  if (authors.length === 0 && works.length === 0) {
+    return {
+      authors: fallbackAuthorRows(),
+      works: fallbackWorkRows(),
+    };
+  }
+
+  return { authors, works };
 }
 
 export function getAccessLevelOptions() {
@@ -160,28 +200,13 @@ export async function getCurrentProfile() {
 }
 
 export async function getAuthors() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("authors").select("*").order("name");
-
-  if (error || !data?.length) {
-    return fallbackAuthorRows();
-  }
-
-  return data as AuthorRecord[];
+  const { authors } = await loadCatalogData();
+  return authors;
 }
 
 export async function getWorks() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("works")
-    .select("*, author:authors(id, name, period, movement, image_url)")
-    .order("title");
-
-  if (error || !data?.length) {
-    return fallbackWorkRows();
-  }
-
-  return data as WorkWithAuthor[];
+  const { works } = await loadCatalogData();
+  return works;
 }
 
 export async function getAuthorsWithWorks() {

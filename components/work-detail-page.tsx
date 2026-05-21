@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
+import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
 import type { getWorkDetail, QuizQuestion } from "@/src/lib/content";
 
 type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
@@ -23,10 +24,12 @@ export function WorkDetailPage({ work, isAdmin }: { work: WorkDetail; isAdmin: b
                 <div className="flex flex-wrap gap-2">
                   <Pill tone="gold">{work.periodLabel}</Pill>
                   <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                  {work.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
                 </div>
               }
             />
-            {isAdmin ? <WorkInlineEditor work={work} /> : null}
+            {isAdmin && !work.is_demo ? <WorkInlineEditor work={work} /> : null}
+            {isAdmin && work.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
           </div>
         </div>
       </GlassCard>

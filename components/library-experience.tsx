@@ -6,6 +6,7 @@ import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor, WorkInlineEditor } from "@/components/public-inline-editors";
 import { genreTabs, libraryCategories, periodTabs } from "@/data/library";
 import { EmptyState, GlassCard, Pill, PremiumButton, SearchBar, SectionTitle, Surface, Tabs } from "@/components/ui";
+import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
 import type { getLibraryData } from "@/src/lib/content";
 
 type LibraryData = Awaited<ReturnType<typeof getLibraryData>>;
@@ -121,6 +122,7 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Pill tone="gold">{author.works.length} ნაწარმოები</Pill>
                         <Pill tone="rose">{author.accessLevelLabel}</Pill>
+                        {author.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
                       </div>
                     </div>
                   </div>
@@ -135,7 +137,8 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
                       </Link>
                     ))}
                   </div>
-                  {isAdmin ? <AuthorInlineEditor author={author} compact /> : null}
+                  {isAdmin && !author.is_demo ? <AuthorInlineEditor author={author} compact /> : null}
+                  {isAdmin && author.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
                 </div>
               ) : null}
             </article>
@@ -161,11 +164,13 @@ export function LibraryExperience({ data, isAdmin }: { data: LibraryData; isAdmi
                   <div className="flex flex-wrap gap-2">
                     <Pill>{work.genreLabel}</Pill>
                     <Pill tone="rose">{work.accessLevelLabel}</Pill>
+                    {work.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
               </Link>
-              {isAdmin ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+              {isAdmin && !work.is_demo ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
+              {isAdmin && work.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
             </div>
           ))}
         </div>

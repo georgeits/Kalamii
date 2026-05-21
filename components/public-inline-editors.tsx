@@ -2,14 +2,49 @@
 
 import { useState } from "react";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
+import { DEMO_RECORD_MESSAGE, isDemoRecord } from "@/src/lib/demo-record";
 import type { QuizQuestion, SummaryChapter } from "@/src/lib/content";
 
 export function AuthorInlineEditor({
   author,
   compact = false,
 }: {
-  author: { id: string; biography: string; image_url?: string | null };
+  author: { id: string; biography: string; image_url?: string | null; is_demo?: boolean };
   compact?: boolean;
+}) {
+  if (isDemoRecord(author)) {
+    return <DemoNotice compact={compact} />;
+  }
+  return <EditableAuthorInlineEditor author={author} compact={compact} />;
+}
+
+export function WorkInlineEditor({
+  work,
+  compact = false,
+}: {
+  work: {
+    id: string;
+    plan?: string | null;
+    summary: string;
+    summary_chapters?: SummaryChapter[] | null;
+    analysis?: string | null;
+    quiz_data?: QuizQuestion[] | null;
+    is_demo?: boolean;
+  };
+  compact?: boolean;
+}) {
+  if (isDemoRecord(work)) {
+    return <DemoNotice compact={compact} />;
+  }
+  return <EditableWorkInlineEditor work={work} compact={compact} />;
+}
+
+function EditableAuthorInlineEditor({
+  author,
+  compact,
+}: {
+  author: { id: string; biography: string; image_url?: string | null; is_demo?: boolean };
+  compact: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [biography, setBiography] = useState(author.biography);
@@ -73,9 +108,9 @@ export function AuthorInlineEditor({
   );
 }
 
-export function WorkInlineEditor({
+function EditableWorkInlineEditor({
   work,
-  compact = false,
+  compact,
 }: {
   work: {
     id: string;
@@ -84,8 +119,9 @@ export function WorkInlineEditor({
     summary_chapters?: SummaryChapter[] | null;
     analysis?: string | null;
     quiz_data?: QuizQuestion[] | null;
+    is_demo?: boolean;
   };
-  compact?: boolean;
+  compact: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [plan, setPlan] = useState(work.plan ?? "");
@@ -443,6 +479,14 @@ function MiniControls({
 
 function EmptyBuilderCopy({ text }: { text: string }) {
   return <p className="rounded-[14px] border border-[color:var(--line)] bg-white/[0.035] px-4 py-3 text-sm text-[color:var(--muted)]">{text}</p>;
+}
+
+function DemoNotice({ compact }: { compact: boolean }) {
+  return (
+    <p className={`${compact ? "mt-3" : "mt-4"} text-sm text-[color:var(--muted)]`}>
+      {DEMO_RECORD_MESSAGE}
+    </p>
+  );
 }
 
 function EditorArea({

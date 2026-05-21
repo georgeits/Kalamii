@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { AccessBadge, LockedContent } from "@/components/access-helpers";
 import { AuthorPortrait } from "@/components/author-portrait";
@@ -28,9 +31,7 @@ export function AuthorDetailPage({ author, isAdmin, userPlan }: { author: Author
               <AccessBadge userPlan={userPlan} requiredLevel={author.access_level} />
             </div>
             {canAccess ? (
-              <div className="mt-6 rounded-[20px] border border-[color:var(--line)] bg-white/[0.04] p-5">
-                <p className="whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)]">{author.biography}</p>
-              </div>
+              <BiographyCard biography={author.biography} />
             ) : (
               <div className="mt-6">
                 <LockedContent requiredLevel={author.access_level} />
@@ -73,5 +74,41 @@ export function AuthorDetailPage({ author, isAdmin, userPlan }: { author: Author
       </div>
 
     </main>
+  );
+}
+
+function BiographyCard({ biography }: { biography: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldCollapse = biography.trim().length > 420;
+
+  return (
+    <div className="mt-6 rounded-[20px] border border-[color:var(--line)] bg-white/[0.04] p-5">
+      <div className="relative">
+        <div
+          className={`overflow-hidden transition-[max-height] duration-500 ease-out ${isExpanded || !shouldCollapse ? "max-h-[120rem]" : "max-h-[12.5rem]"}`}
+        >
+          <p
+            className={`whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)] ${isExpanded || !shouldCollapse ? "" : "line-clamp-6"}`}
+          >
+            {biography}
+          </p>
+        </div>
+        {!isExpanded && shouldCollapse ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(180deg,rgba(11,20,35,0),rgba(11,20,35,0.92))]" />
+        ) : null}
+      </div>
+
+      {shouldCollapse ? (
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((value) => !value)}
+            className="rounded-full border border-[color:var(--line)] bg-white/[0.04] px-4 py-2 text-sm text-[color:var(--gold-soft)] transition hover:bg-white/[0.08]"
+          >
+            {isExpanded ? "დაკეცვა" : "მეტის ნახვა"}
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }

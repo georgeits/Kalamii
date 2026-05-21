@@ -1,20 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
-import { DEMO_RECORD_MESSAGE, isDemoRecord } from "@/src/lib/demo-record";
 import type { QuizQuestion, SummaryChapter } from "@/src/lib/content";
 
 export function AuthorInlineEditor({
   author,
   compact = false,
 }: {
-  author: { id: string; biography: string; image_url?: string | null; is_demo?: boolean };
+  author: { id: string; biography: string; image_url?: string | null };
   compact?: boolean;
 }) {
-  if (isDemoRecord(author)) {
-    return <DemoNotice compact={compact} />;
-  }
   return <EditableAuthorInlineEditor author={author} compact={compact} />;
 }
 
@@ -29,13 +26,9 @@ export function WorkInlineEditor({
     summary_chapters?: SummaryChapter[] | null;
     analysis?: string | null;
     quiz_data?: QuizQuestion[] | null;
-    is_demo?: boolean;
   };
   compact?: boolean;
 }) {
-  if (isDemoRecord(work)) {
-    return <DemoNotice compact={compact} />;
-  }
   return <EditableWorkInlineEditor work={work} compact={compact} />;
 }
 
@@ -43,9 +36,10 @@ function EditableAuthorInlineEditor({
   author,
   compact,
 }: {
-  author: { id: string; biography: string; image_url?: string | null; is_demo?: boolean };
+  author: { id: string; biography: string; image_url?: string | null };
   compact: boolean;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [biography, setBiography] = useState(author.biography);
   const [imageUrl, setImageUrl] = useState(author.image_url ?? "");
@@ -83,7 +77,7 @@ function EditableAuthorInlineEditor({
     setStatus("შენახულია");
     setIsSaving(false);
     setIsOpen(false);
-    window.location.reload();
+    router.refresh();
   }
 
   return (
@@ -119,10 +113,10 @@ function EditableWorkInlineEditor({
     summary_chapters?: SummaryChapter[] | null;
     analysis?: string | null;
     quiz_data?: QuizQuestion[] | null;
-    is_demo?: boolean;
   };
   compact: boolean;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [plan, setPlan] = useState(work.plan ?? "");
   const [summary, setSummary] = useState(work.summary);
@@ -172,7 +166,7 @@ function EditableWorkInlineEditor({
     setStatus("შენახულია");
     setIsSaving(false);
     setIsOpen(false);
-    window.location.reload();
+    router.refresh();
   }
 
   function addChapter() {
@@ -416,7 +410,7 @@ function SaveRow({
   return (
     <div className="flex gap-2">
       <button type="button" disabled={isSaving} onClick={onSave} className="premium-button rounded-full px-4 py-2 text-sm font-bold text-[#160f08] disabled:opacity-70">
-        {isSaving ? "იტვირთება..." : "შენახვა"}
+        {isSaving ? "ინახება..." : "შენახვა"}
       </button>
       <button type="button" onClick={onCancel} className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white">
         გაუქმება
@@ -479,14 +473,6 @@ function MiniControls({
 
 function EmptyBuilderCopy({ text }: { text: string }) {
   return <p className="rounded-[14px] border border-[color:var(--line)] bg-white/[0.035] px-4 py-3 text-sm text-[color:var(--muted)]">{text}</p>;
-}
-
-function DemoNotice({ compact }: { compact: boolean }) {
-  return (
-    <p className={`${compact ? "mt-3" : "mt-4"} text-sm text-[color:var(--muted)]`}>
-      {DEMO_RECORD_MESSAGE}
-    </p>
-  );
 }
 
 function EditorArea({

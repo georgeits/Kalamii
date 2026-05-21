@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { WorkInlineEditor } from "@/components/public-inline-editors";
-import { GlassCard, Pill, SectionTitle } from "@/components/ui";
-import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
+import { EmptyState, GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { getWorkProfiles } from "@/src/lib/content";
 
 type WorkProfiles = Awaited<ReturnType<typeof getWorkProfiles>>;
@@ -14,6 +13,12 @@ export function WorksPage({ works, isAdmin }: { works: WorkProfiles; isAdmin: bo
         title="საგამოცდო ტექსტების კატალოგი"
         description="თითოეულ ტექსტს აქვს ჟანრი, ავტორი, მოკლე შეჯამება და საგამოცდო თემები. პირადი სტატუსი დაემატება მომხმარებლის აქტივობის შემდეგ."
       />
+      {works.length === 0 ? (
+        <EmptyState
+          title="ნაწარმოებები ჯერ არ არის დამატებული"
+          description="გაუშვით Supabase seed ფაილი ან შექმენით პირველი ნაწარმოები ადმინისტრირების პანელიდან."
+        />
+      ) : null}
       <div className="grid gap-4 xl:grid-cols-2">
         {works.map((work) => (
           <GlassCard key={work.slug} className="h-full p-5 transition hover:-translate-y-1">
@@ -26,7 +31,6 @@ export function WorksPage({ works, isAdmin }: { works: WorkProfiles; isAdmin: bo
                 <div className="flex flex-wrap gap-2">
                   <Pill>{work.genreLabel}</Pill>
                   <Pill tone="rose">{work.accessLevelLabel}</Pill>
-                  {work.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
                 </div>
               </div>
               <p className="mt-4 text-sm leading-6 text-[color:var(--muted)]">{work.summary}</p>
@@ -36,8 +40,7 @@ export function WorksPage({ works, isAdmin }: { works: WorkProfiles; isAdmin: bo
                 ))}
               </div>
             </Link>
-            {isAdmin && !work.is_demo ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
-            {isAdmin && work.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
+            {isAdmin ? <div className="mt-4"><WorkInlineEditor work={work} compact /></div> : null}
           </GlassCard>
         ))}
       </div>

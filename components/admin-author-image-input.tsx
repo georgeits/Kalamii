@@ -16,7 +16,7 @@ export function AdminAuthorImageInput({ authorId, currentImageUrl, onUploaded }:
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl ?? "");
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const canUpload = Boolean(authorId) && !authorId?.startsWith("fallback-");
+  const canUpload = Boolean(authorId);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

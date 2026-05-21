@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor } from "@/components/public-inline-editors";
-import { GlassCard, Pill, SectionTitle } from "@/components/ui";
-import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
+import { EmptyState, GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { getAuthorsWithWorks } from "@/src/lib/content";
 
 type AuthorList = Awaited<ReturnType<typeof getAuthorsWithWorks>>;
@@ -15,6 +14,12 @@ export function AuthorsPage({ authors, isAdmin }: { authors: AuthorList; isAdmin
         title="საგამოცდო პროგრამის ავტორები"
         description="ავტორები წარმოდგენილია ბიოგრაფიული მოკლე აღწერით, ლიტერატურული პერიოდით, მიმდინარეობით და პროგრამაში შესული ნაწარმოებებით."
       />
+      {authors.length === 0 ? (
+        <EmptyState
+          title="ავტორები ჯერ არ არის დამატებული"
+          description="გაუშვით Supabase seed ფაილი ან დაამატეთ პირველი ავტორი ადმინისტრირების პანელიდან."
+        />
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {authors.map((author) => (
           <GlassCard key={author.slug} className="h-full p-5 transition hover:-translate-y-1">
@@ -28,7 +33,6 @@ export function AuthorsPage({ authors, isAdmin }: { authors: AuthorList; isAdmin
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Pill tone="gold">{author.works.length} ნაწარმოები</Pill>
                     <Pill tone="rose">{author.accessLevelLabel}</Pill>
-                    {author.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
                     {author.themes.slice(0, 2).map((theme) => (
                       <Pill key={theme} tone="sky">{theme}</Pill>
                     ))}
@@ -36,8 +40,7 @@ export function AuthorsPage({ authors, isAdmin }: { authors: AuthorList; isAdmin
                 </div>
               </div>
             </Link>
-            {isAdmin && !author.is_demo ? <div className="mt-4"><AuthorInlineEditor author={author} compact /></div> : null}
-            {isAdmin && author.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
+            {isAdmin ? <div className="mt-4"><AuthorInlineEditor author={author} compact /></div> : null}
           </GlassCard>
         ))}
       </div>

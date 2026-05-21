@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "სურათი ვერ მოიძებნა." }, { status: 400 });
     }
 
-    if (authorId === "draft" || authorId.startsWith("fallback-")) {
+    if (authorId === "draft") {
       return NextResponse.json({ error: DEMO_RECORD_MESSAGE }, { status: 400 });
     }
 

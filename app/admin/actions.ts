@@ -42,30 +42,38 @@ export async function createAuthorAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
 
-  await supabase.from("authors").insert({
-    slug: requiredText(formData, "slug"),
-    name: requiredText(formData, "name"),
-    period: requiredText(formData, "period"),
-    movement: requiredText(formData, "movement"),
-    biography: requiredText(formData, "biography"),
-    themes: parseList(formData.get("themes")),
-    image_url: requiredText(formData, "image_url") || null,
-    access_level: requiredText(formData, "access_level") || "free",
-  });
+  const { data, error } = await supabase
+    .from("authors")
+    .insert({
+      slug: requiredText(formData, "slug"),
+      name: requiredText(formData, "name"),
+      period: requiredText(formData, "period"),
+      movement: requiredText(formData, "movement"),
+      biography: requiredText(formData, "biography"),
+      themes: parseList(formData.get("themes")),
+      image_url: requiredText(formData, "image_url") || null,
+      access_level: requiredText(formData, "access_level") || "free",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error(`ავტორის დამატება ვერ მოხერხდა: ${error?.message ?? "უცნობი შეცდომა"}`);
+  }
 
   revalidateContentRoutes();
+  redirect(`/admin/authors/${data.id}`);
 }
 
 export async function updateAuthorAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
   const id = requiredText(formData, "id");
-  const slug = requiredText(formData, "slug");
 
-  await supabase
+  const { error } = await supabase
     .from("authors")
     .update({
-      slug,
+      slug: requiredText(formData, "slug"),
       name: requiredText(formData, "name"),
       period: requiredText(formData, "period"),
       movement: requiredText(formData, "movement"),
@@ -76,51 +84,67 @@ export async function updateAuthorAction(formData: FormData) {
     })
     .eq("id", id);
 
+  if (error) {
+    throw new Error(`ავტორის შენახვა ვერ მოხერხდა: ${error.message}`);
+  }
+
   revalidateContentRoutes();
-  revalidatePath(`/authors/${slug}`);
+  redirect(`/admin/authors/${id}`);
 }
 
 export async function deleteAuthorAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
-  await supabase.from("authors").delete().eq("id", requiredText(formData, "id"));
+  const { error } = await supabase.from("authors").delete().eq("id", requiredText(formData, "id"));
+  if (error) {
+    throw new Error(`ავტორის წაშლა ვერ მოხერხდა: ${error.message}`);
+  }
   revalidateContentRoutes();
+  redirect("/admin");
 }
 
 export async function createWorkAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
 
-  await supabase.from("works").insert({
-    slug: requiredText(formData, "slug"),
-    title: requiredText(formData, "title"),
-    author_id: requiredText(formData, "author_id"),
-    genre: requiredText(formData, "genre"),
-    summary: requiredText(formData, "summary"),
-    summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
-    plan: requiredText(formData, "plan") || null,
-    analysis: requiredText(formData, "analysis") || null,
-    quiz_data: parseQuizQuestions(formData.get("quiz_questions")),
-    themes: parseList(formData.get("themes")),
-    characters: parseList(formData.get("characters")),
-    symbols: parseList(formData.get("symbols")),
-    exam_tips: parseList(formData.get("exam_tips")),
-    access_level: requiredText(formData, "access_level") || "free",
-  });
+  const { data, error } = await supabase
+    .from("works")
+    .insert({
+      slug: requiredText(formData, "slug"),
+      title: requiredText(formData, "title"),
+      author_id: requiredText(formData, "author_id"),
+      genre: requiredText(formData, "genre"),
+      summary: requiredText(formData, "summary"),
+      summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
+      plan: requiredText(formData, "plan") || null,
+      analysis: requiredText(formData, "analysis") || null,
+      quiz_data: parseQuizQuestions(formData.get("quiz_questions")),
+      themes: parseList(formData.get("themes")),
+      characters: parseList(formData.get("characters")),
+      symbols: parseList(formData.get("symbols")),
+      exam_tips: parseList(formData.get("exam_tips")),
+      access_level: requiredText(formData, "access_level") || "free",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error(`ნაწარმოების დამატება ვერ მოხერხდა: ${error?.message ?? "უცნობი შეცდომა"}`);
+  }
 
   revalidateContentRoutes();
+  redirect(`/admin/works/${data.id}`);
 }
 
 export async function updateWorkAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
   const id = requiredText(formData, "id");
-  const slug = requiredText(formData, "slug");
 
-  await supabase
+  const { error } = await supabase
     .from("works")
     .update({
-      slug,
+      slug: requiredText(formData, "slug"),
       title: requiredText(formData, "title"),
       author_id: requiredText(formData, "author_id"),
       genre: requiredText(formData, "genre"),
@@ -137,15 +161,23 @@ export async function updateWorkAction(formData: FormData) {
     })
     .eq("id", id);
 
+  if (error) {
+    throw new Error(`ნაწარმოების შენახვა ვერ მოხერხდა: ${error.message}`);
+  }
+
   revalidateContentRoutes();
-  revalidatePath(`/works/${slug}`);
+  redirect(`/admin/works/${id}`);
 }
 
 export async function deleteWorkAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
-  await supabase.from("works").delete().eq("id", requiredText(formData, "id"));
+  const { error } = await supabase.from("works").delete().eq("id", requiredText(formData, "id"));
+  if (error) {
+    throw new Error(`ნაწარმოების წაშლა ვერ მოხერხდა: ${error.message}`);
+  }
   revalidateContentRoutes();
+  redirect("/admin");
 }
 
 function parseQuizQuestions(value: FormDataEntryValue | null) {

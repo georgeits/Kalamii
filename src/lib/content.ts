@@ -1,6 +1,4 @@
-import { authors as fallbackAuthors } from "@/data/authors";
 import { genres, literaryPeriods } from "@/data/taxonomy";
-import { works as fallbackWorks } from "@/data/works";
 import { ADMIN_EMAIL, isAdminEmail } from "@/src/lib/auth";
 import { createClient } from "@/src/lib/supabase/server";
 
@@ -39,7 +37,6 @@ export type AuthorRecord = {
   themes: string[];
   image_url?: string | null;
   access_level: AccessLevel;
-  is_demo?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -60,7 +57,6 @@ export type WorkRecord = {
   symbols: string[];
   exam_tips: string[];
   access_level: AccessLevel;
-  is_demo?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -74,57 +70,6 @@ type CatalogData = {
   works: WorkWithAuthor[];
 };
 
-function fallbackAuthorRows(): AuthorRecord[] {
-  return fallbackAuthors.map((author, index) => ({
-    id: `fallback-author-${index}`,
-    slug: author.slug,
-    name: author.name,
-    period: author.period,
-    movement: author.movement,
-    biography: author.biography,
-    themes: author.themes,
-    image_url: null,
-    access_level: "free",
-    is_demo: true,
-  }));
-}
-
-function fallbackWorkRows(): WorkWithAuthor[] {
-  const authors = fallbackAuthorRows();
-
-  return fallbackWorks.map((work, index) => {
-    const author = authors.find((item) => item.name === work.author) ?? null;
-
-    return {
-      id: `fallback-work-${index}`,
-      slug: work.slug,
-      title: work.title,
-      author_id: author?.id ?? `fallback-author-${index}`,
-      genre: work.genre,
-      summary: work.summary,
-      summary_chapters: [],
-      plan: null,
-      analysis: null,
-      quiz_data: [],
-      themes: work.themes,
-      characters: work.characters,
-      symbols: work.symbols,
-      exam_tips: work.examTips,
-      access_level: "free",
-      is_demo: true,
-      author: author
-        ? {
-            id: author.id,
-            name: author.name,
-            period: author.period,
-            movement: author.movement,
-            image_url: author.image_url,
-          }
-        : null,
-    };
-  });
-}
-
 async function loadCatalogData(): Promise<CatalogData> {
   const supabase = await createClient();
   const [{ data: authorsData, error: authorsError }, { data: worksData, error: worksError }] =
@@ -137,21 +82,13 @@ async function loadCatalogData(): Promise<CatalogData> {
     ]);
 
   if (authorsError || worksError) {
-    return {
-      authors: fallbackAuthorRows(),
-      works: fallbackWorkRows(),
-    };
+    throw new Error(
+      `Supabase catalog load failed: ${authorsError?.message ?? worksError?.message ?? "unknown error"}`,
+    );
   }
 
   const authors = (authorsData ?? []) as AuthorRecord[];
   const works = (worksData ?? []) as WorkWithAuthor[];
-
-  if (authors.length === 0 && works.length === 0) {
-    return {
-      authors: fallbackAuthorRows(),
-      works: fallbackWorkRows(),
-    };
-  }
 
   return { authors, works };
 }
@@ -231,6 +168,11 @@ export async function getAuthorDetail(slug: string) {
   return authors.find((item) => item.slug === slug) ?? null;
 }
 
+export async function getAuthorById(id: string) {
+  const authors = await getAuthors();
+  return authors.find((item) => item.id === id) ?? null;
+}
+
 export async function getWorkProfiles() {
   const works = await getWorks();
 
@@ -262,6 +204,11 @@ export async function getWorkDetail(slug: string) {
     movement: work.author?.movement ?? "",
     accessLevelLabel: getAccessLevelLabel(work.access_level),
   };
+}
+
+export async function getWorkById(id: string) {
+  const works = await getWorks();
+  return works.find((item) => item.id === id) ?? null;
 }
 
 export async function getLibraryData() {

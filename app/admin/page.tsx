@@ -3,11 +3,8 @@ import { AdminPage } from "@/components/admin-page";
 import { redirect } from "next/navigation";
 import {
   ADMIN_EMAIL,
-  getAccessLevelOptions,
   getAuthors,
-  getAuthorPeriodOptions,
   getCurrentProfile,
-  getGenreOptions,
   getWorks,
 } from "@/src/lib/content";
 
@@ -29,13 +26,7 @@ export default async function Admin() {
 
   return (
     <AppShell currentPath="/admin">
-      <AdminPage
-        authors={authors}
-        works={works}
-        authorPeriodOptions={getAuthorPeriodOptions()}
-        genreOptions={getGenreOptions()}
-        accessLevelOptions={getAccessLevelOptions()}
-      />
+      <AdminPage authors={authors} works={works} />
     </AppShell>
   );
 }

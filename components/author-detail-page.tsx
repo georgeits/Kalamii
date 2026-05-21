@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor, WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, PremiumButton, SectionTitle } from "@/components/ui";
-import { DEMO_RECORD_MESSAGE } from "@/src/lib/demo-record";
 import type { getAuthorDetail } from "@/src/lib/content";
 
 type AuthorDetail = NonNullable<Awaited<ReturnType<typeof getAuthorDetail>>>;
@@ -15,9 +14,7 @@ export function AuthorDetailPage({ author, isAdmin }: { author: AuthorDetail; is
           <AuthorPortrait name={author.name} imageUrl={author.image_url} className="aspect-[4/5]" large />
           <div>
             <SectionTitle eyebrow={`${author.periodLabel} • ${author.movement}`} title={author.name} description={author.biography} />
-            {author.is_demo ? <div className="mt-4"><Pill tone="sky">დემო • მხოლოდ სანახავად</Pill></div> : null}
-            {isAdmin && !author.is_demo ? <AuthorInlineEditor author={author} /> : null}
-            {isAdmin && author.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
+            {isAdmin ? <AuthorInlineEditor author={author} /> : null}
           </div>
         </div>
       </GlassCard>
@@ -42,13 +39,9 @@ export function AuthorDetailPage({ author, isAdmin }: { author: AuthorDetail; is
                 <Link href={`/works/${work.slug}`}>
                   <p className="font-semibold text-white">{work.title}</p>
                   <p className="mt-2 text-sm text-[color:var(--muted)]">{work.summary}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Pill>{work.genreLabel}</Pill>
-                    {work.is_demo ? <Pill tone="sky">დემო • მხოლოდ სანახავად</Pill> : null}
-                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2"><Pill>{work.genreLabel}</Pill></div>
                 </Link>
-                {isAdmin && !work.is_demo ? <WorkInlineEditor work={work} compact /> : null}
-                {isAdmin && work.is_demo ? <p className="mt-4 text-sm text-[color:var(--muted)]">{DEMO_RECORD_MESSAGE}</p> : null}
+                {isAdmin ? <WorkInlineEditor work={work} compact /> : null}
               </div>
             ))}
           </div>

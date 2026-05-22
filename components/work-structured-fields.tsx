@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SummaryChapter } from "@/src/lib/content";
 import {
   createEmptyExerciseSet,
@@ -26,11 +26,19 @@ export function WorkStructuredFields({
   initialChapters: SummaryChapter[];
   initialExercises: ExerciseSet[];
 }) {
-  const [chapters, setChapters] = useState<SummaryChapter[]>(initialChapters);
-  const [exercises, setExercises] = useState<ExerciseSet[]>(initialExercises);
+  const [chapters, setChapters] = useState<SummaryChapter[]>(() => initialChapters);
+  const [exercises, setExercises] = useState<ExerciseSet[]>(() => initialExercises);
   const errors = useMemo(() => validateExerciseSets(exercises), [exercises]);
   const safeExercises = errors.length > 0 ? [] : exercises;
   const [nextType, setNextType] = useState<ExerciseType>("multiple_choice");
+
+  useEffect(() => {
+    setChapters(initialChapters);
+  }, [initialChapters]);
+
+  useEffect(() => {
+    setExercises(initialExercises);
+  }, [initialExercises]);
 
   return (
     <div className="space-y-4">

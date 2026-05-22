@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
 import { SaveButton } from "@/components/admin-server-buttons";
 import { WorkStructuredFields } from "@/components/work-structured-fields";
@@ -84,8 +84,85 @@ export function AdminWorkEditor({
   accessLevelOptions: readonly Option[];
   mode: "create" | "edit";
 }) {
-  const [title, setTitle] = useState(work?.title ?? "");
-  const [slug, setSlug] = useState(work?.slug ?? slugifyGeorgian(work?.title ?? ""));
+  const initialWorkState = useMemo(
+    () => ({
+      title: work?.title ?? "",
+      slug: work?.slug ?? slugifyGeorgian(work?.title ?? ""),
+      authorId: work?.author_id ?? authors[0]?.id ?? "",
+      genre: work?.genre ?? genreOptions[0]?.value ?? "",
+      accessLevel: work?.access_level ?? "free",
+      summary: work?.summary ?? "",
+      plan: work?.plan ?? "",
+      chapters: work?.summary_chapters ?? [],
+      exercises: work?.exercise_data ?? [],
+      analysis: work?.analysis ?? "",
+      themes: work?.themes?.join(", ") ?? "",
+      characters: work?.characters?.join(", ") ?? "",
+      symbols: work?.symbols?.join(", ") ?? "",
+      examTips: work?.exam_tips?.join(", ") ?? "",
+    }),
+    [authors, genreOptions, work],
+  );
+  const [isHydrating, setIsHydrating] = useState(mode === "edit" && !work);
+  const [title, setTitle] = useState(initialWorkState.title);
+  const [slug, setSlug] = useState(initialWorkState.slug);
+  const [authorId, setAuthorId] = useState(initialWorkState.authorId);
+  const [genre, setGenre] = useState(initialWorkState.genre);
+  const [accessLevel, setAccessLevel] = useState(initialWorkState.accessLevel);
+  const [summary, setSummary] = useState(initialWorkState.summary);
+  const [plan, setPlan] = useState(initialWorkState.plan);
+  const [analysis, setAnalysis] = useState(initialWorkState.analysis);
+  const [themes, setThemes] = useState(initialWorkState.themes);
+  const [characters, setCharacters] = useState(initialWorkState.characters);
+  const [symbols, setSymbols] = useState(initialWorkState.symbols);
+  const [examTips, setExamTips] = useState(initialWorkState.examTips);
+  const [structuredKey, setStructuredKey] = useState(work?.id ?? "create");
+  const [chapters, setChapters] = useState(initialWorkState.chapters);
+  const [exercises, setExercises] = useState(initialWorkState.exercises);
+
+  useEffect(() => {
+    if (mode !== "edit") {
+      return;
+    }
+
+    if (!work) {
+      setIsHydrating(true);
+      return;
+    }
+
+    setTitle(initialWorkState.title);
+    setSlug(initialWorkState.slug);
+    setAuthorId(initialWorkState.authorId);
+    setGenre(initialWorkState.genre);
+    setAccessLevel(initialWorkState.accessLevel);
+    setSummary(initialWorkState.summary);
+    setPlan(initialWorkState.plan);
+    setAnalysis(initialWorkState.analysis);
+    setThemes(initialWorkState.themes);
+    setCharacters(initialWorkState.characters);
+    setSymbols(initialWorkState.symbols);
+    setExamTips(initialWorkState.examTips);
+    setChapters(initialWorkState.chapters);
+    setExercises(initialWorkState.exercises);
+    setStructuredKey(work.id);
+    setIsHydrating(false);
+  }, [initialWorkState, mode, work]);
+
+  if (mode === "edit" && (isHydrating || !work)) {
+    return (
+      <main className="space-y-6 pb-8">
+        <SectionTitle
+          eyebrow="CMS • ნაწარმოები"
+          title="ნაწარმოების რედაქტირება"
+          description="მონაცემები იტვირთება. დაელოდეთ, სანამ არსებული შინაარსი, თავები და სავარჯიშოები გამოჩნდება."
+          action={<Link href="/admin" className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">უკან</Link>}
+        />
+        <GlassCard className="p-6">
+          <p className="text-sm text-[color:var(--muted)]">იტვირთება...</p>
+        </GlassCard>
+      </main>
+    );
+  }
 
   return (
     <main className="space-y-6 pb-8">
@@ -100,7 +177,7 @@ export function AdminWorkEditor({
         <form action={action} className="space-y-5">
           {work ? <input type="hidden" name="id" value={work.id} /> : null}
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="სათაური" name="title" defaultValue={work?.title} value={title} onValueChange={(nextValue) => {
+            <Field label="სათაური" name="title" value={title} onValueChange={(nextValue) => {
               setTitle(nextValue);
               setSlug(slugifyGeorgian(nextValue));
             }} />
@@ -123,27 +200,35 @@ export function AdminWorkEditor({
             <SelectField
               label="ავტორი"
               name="author_id"
-              defaultValue={work?.author_id}
+              value={authorId}
+              onValueChange={(nextValue) => setAuthorId(nextValue)}
               options={authors.map((author) => ({ value: author.id, label: author.name }))}
             />
-            <SelectField label="ჟანრი" name="genre" defaultValue={work?.genre} options={genreOptions} />
-            <SelectField label="წვდომა" name="access_level" defaultValue={work?.access_level ?? "free"} options={accessLevelOptions} />
+            <SelectField label="ჟანრი" name="genre" value={genre} onValueChange={(nextValue) => setGenre(nextValue as WorkRecord["genre"])} options={genreOptions} />
+            <SelectField
+              label="წვდომა"
+              name="access_level"
+              value={accessLevel}
+              onValueChange={(nextValue) => setAccessLevel(nextValue as WorkRecord["access_level"])}
+              options={accessLevelOptions}
+            />
           </div>
-          <TextAreaField label="მოკლე აღწერა" name="summary" defaultValue={work?.summary} rows={4} />
-          <TextAreaField label="გეგმა" name="plan" defaultValue={work?.plan ?? ""} rows={5} />
+          <TextAreaField label="მოკლე აღწერა" name="summary" value={summary} onValueChange={setSummary} rows={4} />
+          <TextAreaField label="გეგმა" name="plan" value={plan} onValueChange={setPlan} rows={5} />
           <WorkStructuredFields
+            key={structuredKey}
             chapterFieldName="summary_chapters"
             quizFieldName="quiz_questions"
             exerciseFieldName="exercise_data"
-            initialChapters={work?.summary_chapters ?? []}
-            initialExercises={work?.exercise_data ?? []}
+            initialChapters={chapters}
+            initialExercises={exercises}
           />
-          <TextAreaField label="ანალიზი" name="analysis" defaultValue={work?.analysis ?? ""} rows={8} />
+          <TextAreaField label="ანალიზი" name="analysis" value={analysis} onValueChange={setAnalysis} rows={8} />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="თემები" name="themes" defaultValue={work?.themes.join(", ")} helper="მძიმით გამოყავით თემები." />
-            <Field label="პერსონაჟები" name="characters" defaultValue={work?.characters.join(", ")} helper="მძიმით გამოყავით პერსონაჟები." />
-            <Field label="სიმბოლოები" name="symbols" defaultValue={work?.symbols.join(", ")} helper="მძიმით გამოყავით სიმბოლოები." />
-            <Field label="გამოცდის რჩევები" name="exam_tips" defaultValue={work?.exam_tips.join(", ")} helper="მძიმით გამოყავით რჩევები." />
+            <Field label="თემები" name="themes" value={themes} onValueChange={setThemes} helper="მძიმით გამოყავით თემები." />
+            <Field label="პერსონაჟები" name="characters" value={characters} onValueChange={setCharacters} helper="მძიმით გამოყავით პერსონაჟები." />
+            <Field label="სიმბოლოები" name="symbols" value={symbols} onValueChange={setSymbols} helper="მძიმით გამოყავით სიმბოლოები." />
+            <Field label="გამოცდის რჩევები" name="exam_tips" value={examTips} onValueChange={setExamTips} helper="მძიმით გამოყავით რჩევები." />
           </div>
           <SaveButton label="შენახვა" />
         </form>
@@ -182,20 +267,59 @@ function Field({
   );
 }
 
-function TextAreaField({ label, name, defaultValue, rows }: { label: string; name: string; defaultValue?: string; rows: number }) {
+function TextAreaField({
+  label,
+  name,
+  defaultValue,
+  value,
+  onValueChange,
+  rows,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  rows: number;
+}) {
   return (
     <label className="block min-w-0">
       <span className="text-sm font-medium text-[color:var(--muted)]">{label}</span>
-      <textarea name={name} defaultValue={defaultValue} rows={rows} className="mt-2 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]" />
+      <textarea
+        name={name}
+        {...(value !== undefined ? { value } : { defaultValue })}
+        onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
+        rows={rows}
+        className="mt-2 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]"
+      />
     </label>
   );
 }
 
-function SelectField({ label, name, defaultValue, options }: { label: string; name: string; defaultValue?: string; options: readonly Option[] }) {
+function SelectField({
+  label,
+  name,
+  defaultValue,
+  value,
+  onValueChange,
+  options,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  options: readonly Option[];
+}) {
   return (
     <label className="block min-w-0">
       <span className="text-sm font-medium text-[color:var(--muted)]">{label}</span>
-      <select name={name} defaultValue={defaultValue} className="mt-2 h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]">
+      <select
+        name={name}
+        {...(value !== undefined ? { value } : { defaultValue })}
+        onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
+        className="mt-2 h-11 w-full min-w-0 rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none transition focus:border-[rgba(244,177,93,0.45)]"
+      >
         {options.map((option) => (
           <option key={`${name}-${option.value}`} value={option.value}>
             {option.label}

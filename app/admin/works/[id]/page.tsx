@@ -29,6 +29,10 @@ export default async function EditWorkAdminPage({ params }: { params: Promise<{ 
     notFound();
   }
 
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Admin edit work payload", work);
+  }
+
   return (
     <AppShell currentPath="/admin">
       <AdminWorkEditor

@@ -110,6 +110,31 @@ type SiteSettingsRecord = {
   featured_author_id: string | null;
 };
 
+function parseJsonArray<T>(value: unknown): T[] | null {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? (parsed as T[]) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function normalizeSummaryChapters(value: unknown): SummaryChapter[] {
+  return parseJsonArray<SummaryChapter>(value) ?? [];
+}
+
+function normalizeQuizData(value: unknown): QuizQuestion[] {
+  return parseJsonArray<QuizQuestion>(value) ?? [];
+}
+
 function isMissingColumnError(message: string, column: string) {
   return message.toLowerCase().includes(`column ${column.toLowerCase()} does not exist`);
 }
@@ -194,11 +219,16 @@ function normalizeWorks(rows: Record<string, unknown>[]) {
   return rows.map((work) => {
     const authorValue = work.author;
     const authorRecord = Array.isArray(authorValue) ? authorValue[0] : authorValue;
+    const summaryChapters = normalizeSummaryChapters(work.summary_chapters);
+    const quizData = normalizeQuizData(work.quiz_data);
+    const exerciseData = normalizeExerciseSets(work.exercise_data, quizData);
 
     return {
       ...work,
       slug: ensureSlug(String(work.slug ?? work.title ?? ""), `work-${String(work.id ?? "").slice(0, 8)}`),
-      exercise_data: normalizeExerciseSets(work.exercise_data, (work.quiz_data as QuizQuestion[] | null | undefined) ?? []),
+      summary_chapters: summaryChapters,
+      quiz_data: quizData,
+      exercise_data: exerciseData,
       author: authorRecord
         ? {
             id: String((authorRecord as Record<string, unknown>).id ?? ""),
@@ -617,6 +647,33 @@ function calculateStreak(values: string[]) {
 }
 
 export async function getWorkById(id: string) {
+  const supabase = await createClient();
+  let directResult = await supabase
+    .from("works")
+    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, exercise_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (directResult.error && isMissingColumnError(directResult.error.message, "works.exercise_data")) {
+    directResult = await supabase
+      .from("works")
+      .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+      .eq("id", id)
+      .maybeSingle();
+  }
+
+  if (directResult.error && process.env.NODE_ENV !== "production") {
+    console.error("Direct work id query failed", {
+      id,
+      error: directResult.error.message,
+    });
+  }
+
+  if (directResult.data) {
+    const [work] = normalizeWorks([directResult.data as Record<string, unknown>]);
+    return work ?? null;
+  }
+
   const works = await getWorks();
   return works.find((item) => item.id === id) ?? null;
 }

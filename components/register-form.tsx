@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
 import { createClient } from "@/src/lib/supabase/client";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +63,8 @@ export function RegisterForm() {
       }
 
       if (!data.user) {
-        router.replace("/login?registered=1");
+        const redirectedFrom = searchParams.get("redirectedFrom");
+        router.replace(redirectedFrom ? `/login?registered=1&redirectedFrom=${encodeURIComponent(redirectedFrom)}` : "/login?registered=1");
         router.refresh();
         return;
       }
@@ -83,7 +85,8 @@ export function RegisterForm() {
         console.error("Profile sync failed after sign-up");
       }
 
-      router.replace(normalizedEmail === ADMIN_EMAIL ? "/admin" : "/dashboard");
+      const redirectedFrom = searchParams.get("redirectedFrom");
+      router.replace(redirectedFrom || (normalizedEmail === ADMIN_EMAIL ? "/admin" : "/dashboard"));
       router.refresh();
     } catch (error) {
       setErrorMessage(error instanceof Error ? `რეგისტრაციის შეცდომა: ${error.message}` : "რეგისტრაცია ვერ შესრულდა.");
@@ -158,7 +161,10 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-[color:var(--muted)]">
         უკვე გაქვთ ანგარიში?{" "}
-        <Link href="/login" className="text-[color:var(--gold-soft)] transition hover:text-white">
+        <Link
+          href={searchParams.get("redirectedFrom") ? `/login?redirectedFrom=${encodeURIComponent(searchParams.get("redirectedFrom") ?? "")}` : "/login"}
+          className="text-[color:var(--gold-soft)] transition hover:text-white"
+        >
           ავტორიზაცია
         </Link>
       </p>

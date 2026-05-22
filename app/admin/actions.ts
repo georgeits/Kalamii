@@ -33,6 +33,17 @@ function requiredText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function calculateExpiration(duration: string, customDate: string) {
+  if (duration === "custom") {
+    return customDate ? new Date(customDate).toISOString() : null;
+  }
+
+  const days = Number(duration || "30");
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
 function revalidateContentRoutes() {
   revalidatePath("/admin");
   revalidatePath("/authors");
@@ -237,14 +248,7 @@ export async function assignSubscriptionAction(formData: FormData) {
 
   let expiresAt: string | null = null;
   if (plan !== "free") {
-    if (duration === "custom") {
-      expiresAt = customDate ? new Date(customDate).toISOString() : null;
-    } else {
-      const days = Number(duration || "30");
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      expiresAt = date.toISOString();
-    }
+    expiresAt = calculateExpiration(duration, customDate);
   }
 
   const status =
@@ -265,6 +269,89 @@ export async function assignSubscriptionAction(formData: FormData) {
 
   if (error) {
     throw new Error(`პაკეტის მინიჭება ვერ მოხერხდა: ${error.message}`);
+  }
+
+  revalidateContentRoutes();
+  redirect("/admin");
+}
+
+export async function reviewPaymentRequestAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const supabase = createAdminClient();
+  const requestId = requiredText(formData, "request_id");
+  const decision = requiredText(formData, "decision");
+  const duration = requiredText(formData, "duration") || "30";
+  const customDate = requiredText(formData, "custom_expires_at");
+  const overridePlan = requiredText(formData, "plan");
+
+  const { data: request, error: requestError } = await supabase
+    .from("payment_requests")
+    .select("id, user_id, email, plan")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (requestError || !request) {
+    throw new Error(`გადახდის მოთხოვნა ვერ მოიძებნა: ${requestError?.message ?? "უცნობი შეცდომა"}`);
+  }
+
+  if (decision === "approve") {
+    const plan = (overridePlan || request.plan) as "standard" | "premium";
+    const expiresAt = calculateExpiration(duration, customDate);
+    const status = expiresAt && new Date(expiresAt).getTime() < Date.now() ? "expired" : "active";
+
+    const { error: subscriptionError } = await supabase.from("subscriptions").upsert({
+      user_id: request.user_id,
+      email: request.email,
+      plan,
+      status,
+      starts_at: new Date().toISOString(),
+      expires_at: expiresAt,
+    });
+
+    if (subscriptionError) {
+      throw new Error(`პაკეტის გააქტიურება ვერ მოხერხდა: ${subscriptionError.message}`);
+    }
+  }
+
+  const { error: reviewError } = await supabase
+    .from("payment_requests")
+    .update({
+      status: decision === "approve" ? "approved" : "rejected",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: admin.id,
+    })
+    .eq("id", requestId);
+
+  if (reviewError) {
+    throw new Error(`გადახდის მოთხოვნის განახლება ვერ მოხერხდა: ${reviewError.message}`);
+  }
+
+  revalidateContentRoutes();
+  redirect("/admin");
+}
+
+export async function updateSubscriptionAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const id = requiredText(formData, "id");
+  const plan = requiredText(formData, "plan") || "free";
+  const duration = requiredText(formData, "duration") || "30";
+  const customDate = requiredText(formData, "custom_expires_at");
+  const expiresAt = plan === "free" ? null : calculateExpiration(duration, customDate);
+  const status = plan === "free" ? "cancelled" : expiresAt && new Date(expiresAt).getTime() < Date.now() ? "expired" : "active";
+
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      plan,
+      status,
+      starts_at: new Date().toISOString(),
+      expires_at: expiresAt,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`პაკეტის განახლება ვერ მოხერხდა: ${error.message}`);
   }
 
   revalidateContentRoutes();

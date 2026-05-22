@@ -2,6 +2,7 @@ import { genres, literaryPeriods } from "@/data/taxonomy";
 import { getAccessLevelLabel, type AccessLevel } from "@/src/lib/access";
 import { ADMIN_EMAIL, isAdminEmail } from "@/src/lib/auth";
 import { normalizeExerciseSets, type ExerciseProgressRecord, type ExerciseSet } from "@/src/lib/exercises";
+import { PLAN_PRICES, type PaidPlan } from "@/src/lib/plans";
 import { normalizeSearchValue } from "@/src/lib/search";
 import { ensureSlug } from "@/src/lib/slug";
 import { createClient } from "@/src/lib/supabase/server";
@@ -43,6 +44,22 @@ export type SubscriptionRecord = {
   created_at: string;
   updated_at: string;
   full_name?: string | null;
+};
+
+export type PaymentRequestRecord = {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  plan: PaidPlan;
+  amount: number;
+  receipt_url: string;
+  receipt_signed_url?: string | null;
+  comment: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
 };
 
 export type AuthorRecord = {
@@ -361,6 +378,50 @@ export async function getSubscriptions() {
     updated_at: String(item.updated_at ?? ""),
     full_name: profileMap.get(String(item.user_id ?? ""))?.full_name ?? null,
   })) as SubscriptionRecord[];
+}
+
+export async function getPaymentRequests() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payment_requests")
+    .select("id, user_id, full_name, email, plan, amount, receipt_url, comment, status, created_at, reviewed_at, reviewed_by")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Payment requests query failed: ${error.message}`);
+  }
+
+  const requests = ((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+    id: String(item.id ?? ""),
+    user_id: String(item.user_id ?? ""),
+    full_name: (item.full_name as string | null | undefined) ?? null,
+    email: String(item.email ?? ""),
+    plan: String(item.plan ?? "standard") as PaidPlan,
+    amount: Number(item.amount ?? PLAN_PRICES.standard),
+    receipt_url: String(item.receipt_url ?? ""),
+    comment: (item.comment as string | null | undefined) ?? null,
+    status: String(item.status ?? "pending") as PaymentRequestRecord["status"],
+    created_at: String(item.created_at ?? ""),
+    reviewed_at: (item.reviewed_at as string | null | undefined) ?? null,
+    reviewed_by: (item.reviewed_by as string | null | undefined) ?? null,
+  })) as PaymentRequestRecord[];
+
+  if (requests.length === 0) {
+    return requests;
+  }
+
+  const signedUrls = await Promise.all(
+    requests.map(async (request) => {
+      const { data: signedData } = await supabase.storage.from("payment-receipts").createSignedUrl(request.receipt_url, 60 * 60);
+      return [request.id, signedData?.signedUrl ?? null] as const;
+    }),
+  );
+
+  const signedUrlMap = new Map(signedUrls);
+  return requests.map((request) => ({
+    ...request,
+    receipt_signed_url: signedUrlMap.get(request.id) ?? null,
+  }));
 }
 
 export async function getAuthors() {

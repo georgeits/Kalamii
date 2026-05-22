@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getAccessLevelLabel } from "@/src/lib/access";
 import { AuthorPortrait } from "@/components/author-portrait";
-import { assignSubscriptionAction, updateFeaturedAuthorAction } from "@/app/admin/actions";
+import { assignSubscriptionAction, reviewPaymentRequestAction, updateFeaturedAuthorAction, updateSubscriptionAction } from "@/app/admin/actions";
 import { DeleteAuthorButton, DeleteWorkButton, RemoveSubscriptionButton, SaveButton } from "@/components/admin-server-buttons";
 import { EmptyState, GlassCard, Pill, PremiumButton, SectionTitle } from "@/components/ui";
-import type { AuthorRecord, SubscriptionRecord, WorkRecord } from "@/src/lib/content";
+import { getPlanLabel } from "@/src/lib/plans";
+import type { AuthorRecord, PaymentRequestRecord, SubscriptionRecord, WorkRecord } from "@/src/lib/content";
 
 type WorkWithAuthorName = WorkRecord & { author: { id: string; name: string } | null };
 
@@ -12,11 +13,13 @@ export function AdminPage({
   authors,
   works,
   subscriptions,
+  paymentRequests,
   featuredAuthorId,
 }: {
   authors: AuthorRecord[];
   works: WorkWithAuthorName[];
   subscriptions: SubscriptionRecord[];
+  paymentRequests: PaymentRequestRecord[];
   featuredAuthorId: string | null;
 }) {
   return (
@@ -127,6 +130,87 @@ export function AdminPage({
       <GlassCard className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <h3 className="font-serif text-2xl text-white">გადახდის მოთხოვნები</h3>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">ქვითრების დადასტურების შემდეგ პაკეტი ავტომატურად გააქტიურდება არჩეული ვადით.</p>
+          </div>
+          <Pill tone="gold">{paymentRequests.filter((item) => item.status === "pending").length} მოლოდინში</Pill>
+        </div>
+
+        <div className="mt-6 grid gap-4">
+          {paymentRequests.length > 0 ? paymentRequests.map((request) => (
+            <GlassCard key={request.id} className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 className="text-lg font-semibold text-white">{request.full_name || request.email}</h4>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">{request.email}</p>
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">
+                    {new Date(request.created_at).toLocaleString("ka-GE")}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone={request.plan === "premium" ? "gold" : "sky"}>{getPlanLabel(request.plan)}</Pill>
+                  <Pill tone="rose">{`${request.amount}₾`}</Pill>
+                  <Pill tone={request.status === "pending" ? "gold" : request.status === "approved" ? "success" : "danger"}>{request.status}</Pill>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[220px_1fr]">
+                <div className="overflow-hidden rounded-[18px] border border-[color:var(--line)] bg-black/20">
+                  {request.receipt_signed_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={request.receipt_signed_url} alt="Receipt" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex min-h-52 items-center justify-center text-sm text-[color:var(--muted)]">ქვითარი ვერ ჩაიტვირთა</div>
+                  )}
+                </div>
+                <div className="space-y-4">
+                  <div className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.04] p-4">
+                    <p className="text-sm text-[color:var(--muted)]">კომენტარი</p>
+                    <p className="mt-2 text-sm leading-6 text-white">{request.comment?.trim() || "კომენტარი არ დაუტოვებია."}</p>
+                  </div>
+                  <form action={reviewPaymentRequestAction} className="grid gap-3 rounded-[18px] border border-[color:var(--line)] bg-white/[0.04] p-4 md:grid-cols-4">
+                    <input type="hidden" name="request_id" value={request.id} />
+                    <label className="block">
+                      <span className="text-sm text-[color:var(--muted)]">პაკეტი</span>
+                      <select name="plan" defaultValue={request.plan} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+                        <option value="standard">სტანდარტი</option>
+                        <option value="premium">პრემიუმი</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-sm text-[color:var(--muted)]">ხანგრძლივობა</span>
+                      <select name="duration" defaultValue="30" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+                        <option value="7">7 დღე</option>
+                        <option value="30">30 დღე</option>
+                        <option value="90">90 დღე</option>
+                        <option value="custom">მითითებული თარიღი</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-sm text-[color:var(--muted)]">მითითებული თარიღი</span>
+                      <input type="date" name="custom_expires_at" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+                    </label>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <button type="submit" name="decision" value="approve" className="premium-button inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-bold text-[#160f08]">
+                        დადასტურება
+                      </button>
+                      <button type="submit" name="decision" value="reject" className="rounded-full border border-[rgba(255,156,140,0.24)] px-4 py-2 text-sm text-[color:var(--danger)] transition hover:bg-[rgba(255,156,140,0.08)]">
+                        უარყოფა
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </GlassCard>
+          )) : (
+            <EmptyState title="გადახდის მოთხოვნები ჯერ არ არის" description="ახალი მოთხოვნები აქ გამოჩნდება, როცა მომხმარებლები ატვირთავენ გადახდის ქვითრებს." />
+          )}
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
             <h3 className="font-serif text-2xl text-white">მომხმარებლების პაკეტები</h3>
             <p className="mt-2 text-sm text-[color:var(--muted)]">ხელით მიანიჭეთ უფასო, სტანდარტი ან პრემიუმი ელფოსტის მიხედვით. ეს დროებითია გადახდების ინტეგრაციამდე.</p>
           </div>
@@ -183,6 +267,33 @@ export function AdminPage({
                   <RemoveSubscriptionButton id={subscription.id} />
                 </div>
               </div>
+              <form action={updateSubscriptionAction} className="mt-4 grid gap-3 md:grid-cols-4">
+                <input type="hidden" name="id" value={subscription.id} />
+                <label className="block">
+                  <span className="text-sm text-[color:var(--muted)]">პაკეტი</span>
+                  <select name="plan" defaultValue={subscription.plan} className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+                    <option value="free">უფასო</option>
+                    <option value="standard">სტანდარტი</option>
+                    <option value="premium">პრემიუმი</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm text-[color:var(--muted)]">ხანგრძლივობა</span>
+                  <select name="duration" defaultValue="30" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-[#0d1625] px-4 text-sm text-white outline-none">
+                    <option value="7">7 დღე</option>
+                    <option value="30">30 დღე</option>
+                    <option value="90">90 დღე</option>
+                    <option value="custom">მითითებული თარიღი</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm text-[color:var(--muted)]">მითითებული თარიღი</span>
+                  <input type="date" name="custom_expires_at" className="mt-2 h-11 w-full rounded-[16px] border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white outline-none" />
+                </label>
+                <div className="flex items-end">
+                  <SaveButton label="განახლება" />
+                </div>
+              </form>
             </GlassCard>
           )) : (
             <EmptyState title="აქტიური პაკეტები ჯერ არ არის" description="პირველი ტესტური სტანდარტი ან პრემიუმი აქ გამოჩნდება მინიჭების შემდეგ." />

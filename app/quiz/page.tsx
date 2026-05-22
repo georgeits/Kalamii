@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { LockedContent } from "@/components/access-helpers";
 import { QuizPage } from "@/components/quiz-page";
 import { countExerciseQuestions } from "@/src/lib/exercises";
 import { getCurrentProfile, getExerciseProgress, getWorkProfiles } from "@/src/lib/content";
@@ -16,7 +17,13 @@ export default async function Quiz() {
 
   return (
     <AppShell currentPath="/quiz">
-      <QuizPage works={works} progress={progress} totalExercises={totalExercises} totalQuestions={totalQuestions} isAdmin={isAdmin} />
+      {isAdmin || profile?.subscription_plan === "premium" ? (
+        <QuizPage works={works} progress={progress} totalExercises={totalExercises} totalQuestions={totalQuestions} isAdmin={isAdmin} />
+      ) : (
+        <main className="pb-8">
+          <LockedContent requiredLevel="premium" />
+        </main>
+      )}
     </AppShell>
   );
 }

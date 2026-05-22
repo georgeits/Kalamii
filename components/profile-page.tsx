@@ -58,6 +58,8 @@ export function ProfilePage({ profile }: { profile: ProfileRecord }) {
         <div className="mt-5 flex flex-wrap gap-3">
           <PremiumButton href="/dashboard" variant="secondary">დეშბორდი</PremiumButton>
           <PremiumButton href="/library">ბიბლიოთეკა</PremiumButton>
+          {profile.subscription_plan !== "standard" ? <PremiumButton href="/payment?plan=standard" variant="secondary">სტანდარტის შეძენა</PremiumButton> : null}
+          {profile.subscription_plan !== "premium" ? <PremiumButton href="/payment?plan=premium">პრემიუმის შეძენა</PremiumButton> : null}
         </div>
       </GlassCard>
     </main>

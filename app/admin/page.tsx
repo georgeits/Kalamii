@@ -6,6 +6,7 @@ import {
   getAuthors,
   getCurrentProfile,
   getLibraryData,
+  getPaymentRequests,
   getSubscriptions,
   getWorks,
 } from "@/src/lib/content";
@@ -21,10 +22,11 @@ export default async function Admin() {
     redirect("/dashboard");
   }
 
-  const [authors, works, subscriptions, libraryData] = await Promise.all([
+  const [authors, works, subscriptions, paymentRequests, libraryData] = await Promise.all([
     getAuthors(),
     getWorks(),
     getSubscriptions(),
+    getPaymentRequests(),
     getLibraryData(),
   ]);
 
@@ -34,6 +36,7 @@ export default async function Admin() {
         authors={authors}
         works={works}
         subscriptions={subscriptions}
+        paymentRequests={paymentRequests}
         featuredAuthorId={libraryData.featuredAuthorId}
       />
     </AppShell>

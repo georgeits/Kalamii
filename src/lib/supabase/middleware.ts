@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
 
-const protectedRoutes = ["/dashboard", "/admin", "/profile"];
+const protectedRoutes = ["/dashboard", "/admin", "/profile", "/payment"];
 const authRoutes = ["/login", "/register"];
 
 export async function updateSession(request: NextRequest) {
@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
   if (isProtectedRoute && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("redirectedFrom", pathname);
+    redirectUrl.searchParams.set("redirectedFrom", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(redirectUrl);
   }
 

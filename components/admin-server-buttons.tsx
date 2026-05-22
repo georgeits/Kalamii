@@ -39,7 +39,7 @@ export function RemoveSubscriptionButton({ id }: { id: string }) {
   return (
     <form action={removeSubscriptionAction}>
       <input type="hidden" name="id" value={id} />
-      <DeleteButton label="წვდომის მოხსნა" />
+      <DeleteButton label="პაკეტის გაუქმება" />
     </form>
   );
 }

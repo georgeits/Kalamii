@@ -118,7 +118,10 @@ export function AuthForm() {
 
       <p className="text-center text-sm text-[color:var(--muted)]">
         ჯერ არ გაქვთ ანგარიში?{" "}
-        <Link href="/register" className="text-[color:var(--gold-soft)] transition hover:text-white">
+        <Link
+          href={searchParams.get("redirectedFrom") ? `/register?redirectedFrom=${encodeURIComponent(searchParams.get("redirectedFrom") ?? "")}` : "/register"}
+          className="text-[color:var(--gold-soft)] transition hover:text-white"
+        >
           რეგისტრაცია
         </Link>
       </p>

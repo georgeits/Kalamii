@@ -33,7 +33,7 @@ export function LockedContent({
           ? "ეს მასალა ხელმისაწვდომია მხოლოდ პრემიუმ პაკეტში."
           : "ეს მასალა ხელმისაწვდომია მხოლოდ სტანდარტ ან პრემიუმ პაკეტში."}
       </p>
-      <PremiumButton href="/profile">პაკეტის განახლება</PremiumButton>
+      <PremiumButton href={requiredLevel === "premium" ? "/payment?plan=premium" : "/payment?plan=standard"}>პაკეტის შეძენა</PremiumButton>
     </div>
   );
 }

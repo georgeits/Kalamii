@@ -9,6 +9,37 @@ import { getCurrentProfile } from "@/src/lib/content";
 import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
+function mapWorkSaveError(error: { message?: string; code?: string } | Error | unknown) {
+  const rawMessage = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String((error as { message?: string }).message ?? "") : "უცნობი შეცდომა";
+  const normalized = rawMessage.toLowerCase();
+
+  if (normalized.includes("summary_chapters") && normalized.includes("does not exist")) {
+    return {
+      message: "summary_chapters ველი არ არსებობს.",
+      debugMessage: rawMessage,
+    };
+  }
+
+  if (normalized.includes("permission") || normalized.includes("not allowed") || normalized.includes("row-level security")) {
+    return {
+      message: "არ გაქვთ რედაქტირების უფლება.",
+      debugMessage: rawMessage,
+    };
+  }
+
+  if (normalized.includes("ნაწარმოები ვერ მოიძებნა ბაზაში")) {
+    return {
+      message: "ნაწარმოები ვერ მოიძებნა ბაზაში.",
+      debugMessage: rawMessage,
+    };
+  }
+
+  return {
+    message: "შინაარსის შენახვა ვერ მოხერხდა",
+    debugMessage: rawMessage,
+  };
+}
+
 async function requireAdmin() {
   const profile = await getCurrentProfile();
 
@@ -219,7 +250,7 @@ async function saveWork(formData: FormData) {
   const exerciseData = parseExerciseData(formData.get("exercise_data"));
   const cleanedChapters = parseSummaryChapters(formData.get("summary_chapters"));
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("works")
     .update({
       slug,
@@ -238,10 +269,30 @@ async function saveWork(formData: FormData) {
       exam_tips: parseList(formData.get("exam_tips")),
       access_level: requiredText(formData, "access_level") || "free",
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id, summary_chapters")
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (!data?.id) {
+    throw new Error("ნაწარმოები ვერ მოიძებნა ბაზაში.");
+  }
+
+  const { data: confirmedWork, error: confirmError } = await supabase
+    .from("works")
+    .select("id, summary_chapters")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (confirmError) {
+    throw new Error(confirmError.message);
+  }
+
+  if (!confirmedWork?.id) {
+    throw new Error("ნაწარმოები ვერ მოიძებნა ბაზაში.");
   }
 
   revalidateContentRoutes();
@@ -253,15 +304,20 @@ export async function updateWorkFormAction(_: WorkFormState, formData: FormData)
     return {
       status: "success",
       message: "შენახულია",
+      debugMessage: "",
     };
   } catch (error) {
+    console.error("Summary save failed", error);
+
     if (process.env.NODE_ENV !== "production") {
       console.error("Work save failed", error);
     }
 
+    const mapped = mapWorkSaveError(error);
     return {
       status: "error",
-      message: "შინაარსის შენახვა ვერ მოხერხდა",
+      message: mapped.message,
+      debugMessage: process.env.NODE_ENV !== "production" ? mapped.debugMessage : "",
     };
   }
 }

@@ -236,9 +236,12 @@ export function AdminWorkEditor({
             <Field label="გამოცდის რჩევები" name="exam_tips" value={examTips} onValueChange={setExamTips} helper="მძიმით გამოყავით რჩევები." />
           </div>
           {formState.status !== "idle" ? (
-            <p className={`rounded-[16px] px-4 py-3 text-sm ${formState.status === "error" ? "border border-[rgba(255,156,140,0.22)] bg-[rgba(255,156,140,0.1)] text-[color:var(--danger)]" : "border border-[rgba(114,212,164,0.22)] bg-[rgba(114,212,164,0.1)] text-[color:var(--success)]"}`}>
-              {formState.message}
-            </p>
+            <div className={`rounded-[16px] px-4 py-3 text-sm ${formState.status === "error" ? "border border-[rgba(255,156,140,0.22)] bg-[rgba(255,156,140,0.1)] text-[color:var(--danger)]" : "border border-[rgba(114,212,164,0.22)] bg-[rgba(114,212,164,0.1)] text-[color:var(--success)]"}`}>
+              <p>{formState.message}</p>
+              {process.env.NODE_ENV !== "production" && formState.status === "error" && formState.debugMessage ? (
+                <p className="mt-2 text-xs leading-5 opacity-90">{formState.debugMessage}</p>
+              ) : null}
+            </div>
           ) : null}
           <SaveButton label="შენახვა" successLabel={formState.status === "success" ? "შენახულია" : undefined} />
         </form>

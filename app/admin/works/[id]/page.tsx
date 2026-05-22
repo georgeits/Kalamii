@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { updateWorkAction } from "@/app/admin/actions";
+import { updateWorkAction, updateWorkFormAction } from "@/app/admin/actions";
 import { AppShell } from "@/components/app-shell";
 import { AdminWorkEditor } from "@/components/admin-editor-forms";
 import {
@@ -37,6 +37,7 @@ export default async function EditWorkAdminPage({ params }: { params: Promise<{ 
     <AppShell currentPath="/admin">
       <AdminWorkEditor
         action={updateWorkAction}
+        stateAction={updateWorkFormAction}
         work={work}
         authors={authors}
         genreOptions={getGenreOptions()}

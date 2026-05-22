@@ -3,7 +3,7 @@
 import { useFormStatus } from "react-dom";
 import { deleteAuthorAction, deleteWorkAction, removeSubscriptionAction } from "@/app/admin/actions";
 
-export function SaveButton({ label }: { label: string }) {
+export function SaveButton({ label, successLabel }: { label: string; successLabel?: string }) {
   const { pending } = useFormStatus();
 
   return (
@@ -12,7 +12,7 @@ export function SaveButton({ label }: { label: string }) {
       disabled={pending}
       className="premium-button inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-bold text-[#160f08] disabled:opacity-70"
     >
-      {pending ? "ინახება..." : label}
+      {pending ? "ინახება..." : (successLabel ?? label)}
     </button>
   );
 }

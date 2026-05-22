@@ -8,6 +8,16 @@ import { getCurrentProfile } from "@/src/lib/content";
 import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
+export type WorkFormState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+export const initialWorkFormState: WorkFormState = {
+  status: "idle",
+  message: "",
+};
+
 async function requireAdmin() {
   const profile = await getCurrentProfile();
 
@@ -162,41 +172,8 @@ export async function createWorkAction(formData: FormData) {
 }
 
 export async function updateWorkAction(formData: FormData) {
-  await requireAdmin();
-  const supabase = createAdminClient();
-  const id = requiredText(formData, "id");
-  const title = requiredText(formData, "title");
-  const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${id.slice(0, 8)}`);
-
-  const exerciseData = parseExerciseData(formData.get("exercise_data"));
-
-  const { error } = await supabase
-    .from("works")
-    .update({
-      slug,
-      title,
-      author_id: requiredText(formData, "author_id"),
-      genre: requiredText(formData, "genre"),
-      summary: requiredText(formData, "summary"),
-      summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
-      plan: requiredText(formData, "plan") || null,
-      analysis: requiredText(formData, "analysis") || null,
-      exercise_data: exerciseData,
-      quiz_data: extractLegacyQuizData(exerciseData),
-      themes: parseList(formData.get("themes")),
-      characters: parseList(formData.get("characters")),
-      symbols: parseList(formData.get("symbols")),
-      exam_tips: parseList(formData.get("exam_tips")),
-      access_level: requiredText(formData, "access_level") || "free",
-    })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error(`ნაწარმოების შენახვა ვერ მოხერხდა: ${error.message}`);
-  }
-
-  revalidateContentRoutes();
-  redirect(`/admin/works/${id}`);
+  await saveWork(formData);
+  redirect(`/admin/works/${requiredText(formData, "id")}`);
 }
 
 export async function deleteWorkAction(formData: FormData) {
@@ -212,7 +189,8 @@ export async function deleteWorkAction(formData: FormData) {
 
 function parseExerciseData(value: FormDataEntryValue | null) {
   try {
-    const parsed = JSON.parse(String(value ?? "[]"));
+    const rawValue = String(value ?? "").trim();
+    const parsed = JSON.parse(rawValue || "[]");
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -221,10 +199,79 @@ function parseExerciseData(value: FormDataEntryValue | null) {
 
 function parseSummaryChapters(value: FormDataEntryValue | null) {
   try {
-    const parsed = JSON.parse(String(value ?? "[]"));
-    return Array.isArray(parsed) ? parsed : [];
+    const rawValue = String(value ?? "").trim();
+    const parsed = JSON.parse(rawValue || "[]");
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+      .map((item) => ({
+        id: String(item.id ?? crypto.randomUUID()).trim(),
+        title: String(item.title ?? "").trim(),
+        body: String(item.body ?? "").trim(),
+      }))
+      .filter((item) => item.id && item.title && item.body);
   } catch {
     return [];
+  }
+}
+
+async function saveWork(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const id = requiredText(formData, "id");
+  const title = requiredText(formData, "title");
+  const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${id.slice(0, 8)}`);
+  const exerciseData = parseExerciseData(formData.get("exercise_data"));
+  const cleanedChapters = parseSummaryChapters(formData.get("summary_chapters"));
+
+  const { error } = await supabase
+    .from("works")
+    .update({
+      slug,
+      title,
+      author_id: requiredText(formData, "author_id"),
+      genre: requiredText(formData, "genre"),
+      summary: requiredText(formData, "summary"),
+      summary_chapters: cleanedChapters,
+      plan: requiredText(formData, "plan") || null,
+      analysis: requiredText(formData, "analysis") || null,
+      exercise_data: exerciseData,
+      quiz_data: extractLegacyQuizData(exerciseData),
+      themes: parseList(formData.get("themes")),
+      characters: parseList(formData.get("characters")),
+      symbols: parseList(formData.get("symbols")),
+      exam_tips: parseList(formData.get("exam_tips")),
+      access_level: requiredText(formData, "access_level") || "free",
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidateContentRoutes();
+}
+
+export async function updateWorkFormAction(_: WorkFormState, formData: FormData): Promise<WorkFormState> {
+  try {
+    await saveWork(formData);
+    return {
+      status: "success",
+      message: "შენახულია",
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Work save failed", error);
+    }
+
+    return {
+      status: "error",
+      message: "შინაარსის შენახვა ვერ მოხერხდა",
+    };
   }
 }
 

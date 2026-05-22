@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
 import { SaveButton } from "@/components/admin-server-buttons";
 import { WorkStructuredFields } from "@/components/work-structured-fields";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { AuthorRecord, WorkRecord } from "@/src/lib/content";
+import { initialWorkFormState, type WorkFormState } from "@/app/admin/actions";
 import { slugifyGeorgian } from "@/src/lib/slug";
 
 type Option = { value: string; label: string };
@@ -71,6 +72,7 @@ export function AdminAuthorEditor({
 
 export function AdminWorkEditor({
   action,
+  stateAction,
   work,
   authors,
   genreOptions,
@@ -78,6 +80,7 @@ export function AdminWorkEditor({
   mode,
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  stateAction?: (state: WorkFormState, formData: FormData) => Promise<WorkFormState>;
   work?: WorkWithAuthorName;
   authors: AuthorRecord[];
   genreOptions: Option[];
@@ -119,6 +122,7 @@ export function AdminWorkEditor({
   const [structuredKey, setStructuredKey] = useState(work?.id ?? "create");
   const [chapters, setChapters] = useState(initialWorkState.chapters);
   const [exercises, setExercises] = useState(initialWorkState.exercises);
+  const [formState, formAction] = useActionState(stateAction ?? passthroughWorkFormAction, initialWorkFormState);
 
   useEffect(() => {
     if (mode !== "edit") {
@@ -174,7 +178,7 @@ export function AdminWorkEditor({
       />
 
       <GlassCard className="p-6">
-        <form action={action} className="space-y-5">
+        <form action={mode === "edit" && stateAction ? formAction : action} className="space-y-5">
           {work ? <input type="hidden" name="id" value={work.id} /> : null}
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="სათაური" name="title" value={title} onValueChange={(nextValue) => {
@@ -230,11 +234,20 @@ export function AdminWorkEditor({
             <Field label="სიმბოლოები" name="symbols" value={symbols} onValueChange={setSymbols} helper="მძიმით გამოყავით სიმბოლოები." />
             <Field label="გამოცდის რჩევები" name="exam_tips" value={examTips} onValueChange={setExamTips} helper="მძიმით გამოყავით რჩევები." />
           </div>
-          <SaveButton label="შენახვა" />
+          {formState.status !== "idle" ? (
+            <p className={`rounded-[16px] px-4 py-3 text-sm ${formState.status === "error" ? "border border-[rgba(255,156,140,0.22)] bg-[rgba(255,156,140,0.1)] text-[color:var(--danger)]" : "border border-[rgba(114,212,164,0.22)] bg-[rgba(114,212,164,0.1)] text-[color:var(--success)]"}`}>
+              {formState.message}
+            </p>
+          ) : null}
+          <SaveButton label="შენახვა" successLabel={formState.status === "success" ? "შენახულია" : undefined} />
         </form>
       </GlassCard>
     </main>
   );
+}
+
+async function passthroughWorkFormAction(state: WorkFormState) {
+  return state;
 }
 
 function Field({

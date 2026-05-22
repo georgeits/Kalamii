@@ -2,21 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { WorkFormState } from "@/app/admin/work-form-state";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
 import { extractLegacyQuizData } from "@/src/lib/exercises";
 import { getCurrentProfile } from "@/src/lib/content";
 import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
-
-export type WorkFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const initialWorkFormState: WorkFormState = {
-  status: "idle",
-  message: "",
-};
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();

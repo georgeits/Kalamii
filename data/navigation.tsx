@@ -12,4 +12,5 @@ export const navigationItems: NavigationItem[] = [
   { label: "პროგრესი", href: "/dashboard#progress" },
   { label: "პროფილი", href: "/profile" },
   { label: "ადმინი", href: "/admin" },
+  { label: "ადმინი • სავარჯიშოები", href: "/admin/exercises" },
 ];

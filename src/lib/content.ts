@@ -99,6 +99,18 @@ export type WorkRecord = {
   updated_at?: string;
 };
 
+export type StandaloneExerciseRecord = {
+  id: string;
+  title: string;
+  type: "multiple_choice" | "text_correction" | "reading_comprehension";
+  difficulty: "easy" | "medium" | "hard";
+  description?: string | null;
+  content: unknown;
+  access_level: AccessLevel;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type WorkWithAuthor = WorkRecord & {
   author: Pick<AuthorRecord, "id" | "name" | "period" | "movement" | "image_url" | "slug"> | null;
 };
@@ -474,6 +486,59 @@ export async function getAuthors() {
 export async function getWorks() {
   const { works } = await loadCatalogData();
   return works;
+}
+
+export async function getStandaloneExercises() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("standalone_exercises")
+    .select("id, title, type, difficulty, description, content, access_level, created_at, updated_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Standalone exercises query failed: ${error.message}`);
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+    id: String(item.id ?? ""),
+    title: String(item.title ?? ""),
+    type: String(item.type ?? "multiple_choice") as StandaloneExerciseRecord["type"],
+    difficulty: String(item.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],
+    description: (item.description as string | null | undefined) ?? null,
+    content: item.content ?? {},
+    access_level: String(item.access_level ?? "premium") as AccessLevel,
+    created_at: (item.created_at as string | undefined) ?? undefined,
+    updated_at: (item.updated_at as string | undefined) ?? undefined,
+  })) as StandaloneExerciseRecord[];
+}
+
+export async function getStandaloneExerciseById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("standalone_exercises")
+    .select("id, title, type, difficulty, description, content, access_level, created_at, updated_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Standalone exercise detail query failed: ${error.message}`);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    id: String(data.id ?? ""),
+    title: String(data.title ?? ""),
+    type: String(data.type ?? "multiple_choice") as StandaloneExerciseRecord["type"],
+    difficulty: String(data.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],
+    description: (data.description as string | null | undefined) ?? null,
+    content: (data.content as unknown) ?? {},
+    access_level: String(data.access_level ?? "premium") as AccessLevel,
+    created_at: (data.created_at as string | undefined) ?? undefined,
+    updated_at: (data.updated_at as string | undefined) ?? undefined,
+  } satisfies StandaloneExerciseRecord;
 }
 
 export async function getAuthorsWithWorks() {

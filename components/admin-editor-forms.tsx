@@ -6,7 +6,7 @@ import type { WorkFormState } from "@/app/admin/work-form-state";
 import { initialWorkFormState } from "@/app/admin/work-form-state";
 import { AdminAuthorImageInput } from "@/components/admin-author-image-input";
 import { SaveButton } from "@/components/admin-server-buttons";
-import { WorkStructuredFields } from "@/components/work-structured-fields";
+import { WorkContentFields } from "@/components/work-content-fields";
 import { GlassCard, Pill, SectionTitle } from "@/components/ui";
 import type { AuthorRecord, WorkRecord } from "@/src/lib/content";
 import { slugifyGeorgian } from "@/src/lib/slug";
@@ -98,7 +98,7 @@ export function AdminWorkEditor({
       summary: work?.summary ?? "",
       plan: work?.plan ?? "",
       chapters: work?.summary_chapters ?? [],
-      exercises: work?.exercise_data ?? [],
+      quizQuestions: work?.quiz_data ?? [],
       analysis: work?.analysis ?? "",
       themes: work?.themes?.join(", ") ?? "",
       characters: work?.characters?.join(", ") ?? "",
@@ -122,7 +122,7 @@ export function AdminWorkEditor({
   const [examTips, setExamTips] = useState(initialWorkState.examTips);
   const [structuredKey, setStructuredKey] = useState(work?.id ?? "create");
   const [chapters, setChapters] = useState(initialWorkState.chapters);
-  const [exercises, setExercises] = useState(initialWorkState.exercises);
+  const [quizQuestions, setQuizQuestions] = useState(initialWorkState.quizQuestions);
   const [formState, formAction] = useActionState(stateAction ?? passthroughWorkFormAction, initialWorkFormState);
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export function AdminWorkEditor({
     setSymbols(initialWorkState.symbols);
     setExamTips(initialWorkState.examTips);
     setChapters(initialWorkState.chapters);
-    setExercises(initialWorkState.exercises);
+    setQuizQuestions(initialWorkState.quizQuestions);
     setStructuredKey(work.id);
     setIsHydrating(false);
   }, [initialWorkState, mode, work]);
@@ -220,13 +220,12 @@ export function AdminWorkEditor({
           </div>
           <TextAreaField label="მოკლე აღწერა" name="summary" value={summary} onValueChange={setSummary} rows={4} />
           <TextAreaField label="გეგმა" name="plan" value={plan} onValueChange={setPlan} rows={5} />
-          <WorkStructuredFields
+          <WorkContentFields
             key={structuredKey}
             chapterFieldName="summary_chapters"
-            quizFieldName="quiz_questions"
-            exerciseFieldName="exercise_data"
+            quizFieldName="quiz_data"
             initialChapters={chapters}
-            initialExercises={exercises}
+            initialQuestions={quizQuestions}
           />
           <TextAreaField label="ანალიზი" name="analysis" value={analysis} onValueChange={setAnalysis} rows={8} />
           <div className="grid gap-4 md:grid-cols-2">

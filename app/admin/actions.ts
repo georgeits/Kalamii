@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { WorkFormState } from "@/app/admin/work-form-state";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
-import { extractLegacyQuizData } from "@/src/lib/exercises";
 import { getCurrentProfile } from "@/src/lib/content";
 import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
@@ -78,12 +77,22 @@ function calculateExpiration(duration: string, customDate: string) {
 
 function revalidateContentRoutes() {
   revalidatePath("/admin");
+  revalidatePath("/admin/exercises");
   revalidatePath("/authors");
   revalidatePath("/works");
   revalidatePath("/library");
   revalidatePath("/quiz");
   revalidatePath("/profile");
   revalidatePath("/dashboard");
+}
+
+function parseExerciseContent(value: FormDataEntryValue | null) {
+  try {
+    const parsed = JSON.parse(String(value ?? "{}"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 export async function createAuthorAction(formData: FormData) {
@@ -161,8 +170,6 @@ export async function createWorkAction(formData: FormData) {
   const title = requiredText(formData, "title");
   const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${crypto.randomUUID().slice(0, 8)}`);
 
-  const exerciseData = parseExerciseData(formData.get("exercise_data"));
-
   const { data: createdWork, error: createError } = await supabase
     .from("works")
     .insert({
@@ -174,8 +181,7 @@ export async function createWorkAction(formData: FormData) {
       summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
       plan: requiredText(formData, "plan") || null,
       analysis: requiredText(formData, "analysis") || null,
-      exercise_data: exerciseData,
-      quiz_data: extractLegacyQuizData(exerciseData),
+      quiz_data: parseQuizData(formData.get("quiz_data")),
       themes: parseList(formData.get("themes")),
       characters: parseList(formData.get("characters")),
       symbols: parseList(formData.get("symbols")),
@@ -209,7 +215,67 @@ export async function deleteWorkAction(formData: FormData) {
   redirect("/admin");
 }
 
-function parseExerciseData(value: FormDataEntryValue | null) {
+export async function createStandaloneExerciseAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("standalone_exercises")
+    .insert({
+      title: requiredText(formData, "exercise_title"),
+      type: requiredText(formData, "exercise_type"),
+      difficulty: requiredText(formData, "exercise_difficulty") || "medium",
+      description: requiredText(formData, "exercise_description") || null,
+      content: parseExerciseContent(formData.get("exercise_content")),
+      access_level: requiredText(formData, "access_level") || "premium",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error(`სავარჯიშოს დამატება ვერ მოხერხდა: ${error?.message ?? "უცნობი შეცდომა"}`);
+  }
+
+  revalidateContentRoutes();
+  redirect(`/admin/exercises/${data.id}`);
+}
+
+export async function updateStandaloneExerciseAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const id = requiredText(formData, "id");
+
+  const { error } = await supabase
+    .from("standalone_exercises")
+    .update({
+      title: requiredText(formData, "exercise_title"),
+      type: requiredText(formData, "exercise_type"),
+      difficulty: requiredText(formData, "exercise_difficulty") || "medium",
+      description: requiredText(formData, "exercise_description") || null,
+      content: parseExerciseContent(formData.get("exercise_content")),
+      access_level: requiredText(formData, "access_level") || "premium",
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`სავარჯიშოს შენახვა ვერ მოხერხდა: ${error.message}`);
+  }
+
+  revalidateContentRoutes();
+  redirect(`/admin/exercises/${id}`);
+}
+
+export async function deleteStandaloneExerciseAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("standalone_exercises").delete().eq("id", requiredText(formData, "id"));
+  if (error) {
+    throw new Error(`სავარჯიშოს წაშლა ვერ მოხერხდა: ${error.message}`);
+  }
+  revalidateContentRoutes();
+  redirect("/admin/exercises");
+}
+
+function parseQuizData(value: FormDataEntryValue | null) {
   try {
     const rawValue = String(value ?? "").trim();
     const parsed = JSON.parse(rawValue || "[]");
@@ -247,8 +313,8 @@ async function saveWork(formData: FormData) {
   const id = requiredText(formData, "id");
   const title = requiredText(formData, "title");
   const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${id.slice(0, 8)}`);
-  const exerciseData = parseExerciseData(formData.get("exercise_data"));
   const cleanedChapters = parseSummaryChapters(formData.get("summary_chapters"));
+  const quizData = parseQuizData(formData.get("quiz_data"));
 
   const { data, error } = await supabase
     .from("works")
@@ -261,8 +327,7 @@ async function saveWork(formData: FormData) {
       summary_chapters: cleanedChapters,
       plan: requiredText(formData, "plan") || null,
       analysis: requiredText(formData, "analysis") || null,
-      exercise_data: exerciseData,
-      quiz_data: extractLegacyQuizData(exerciseData),
+      quiz_data: quizData,
       themes: parseList(formData.get("themes")),
       characters: parseList(formData.get("characters")),
       symbols: parseList(formData.get("symbols")),

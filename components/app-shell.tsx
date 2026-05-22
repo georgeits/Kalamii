@@ -14,7 +14,7 @@ type AppShellProps = {
 
 export async function AppShell({ children, currentPath, searchQuery = "" }: AppShellProps) {
   const profile = await getCurrentProfile();
-  const visibleNavigation = navigationItems.filter((item) => item.href !== "/admin" || profile?.role === "admin");
+  const visibleNavigation = navigationItems.filter((item) => (!item.href.startsWith("/admin")) || profile?.role === "admin");
   const searchTargetPath = currentPath === "/authors" || currentPath === "/works" || currentPath === "/library" ? currentPath : "/library";
 
   return (

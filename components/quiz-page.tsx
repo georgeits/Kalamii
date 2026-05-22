@@ -18,11 +18,12 @@ import type { getWorkProfiles } from "@/src/lib/content";
 type WorkProfiles = Awaited<ReturnType<typeof getWorkProfiles>>;
 type ExerciseEntry = {
   key: string;
-  workId: string;
+  workId: string | null;
   workTitle: string;
   author: string;
   genreLabel: string;
   exercise: ExerciseSet;
+  source: "work" | "standalone";
 };
 
 type ExerciseMode = ExerciseSet["type"] | "exam_mode";
@@ -51,12 +52,14 @@ function isReadingComprehensionEntry(entry: ExerciseEntry): entry is ExerciseEnt
 
 export function QuizPage({
   works,
+  standaloneExercises,
   progress,
   totalExercises,
   totalQuestions,
   isAdmin,
 }: {
   works: WorkProfiles;
+  standaloneExercises: ExerciseSet[];
   progress: ExerciseProgressRecord;
   totalExercises: number;
   totalQuestions: number;
@@ -64,17 +67,29 @@ export function QuizPage({
 }) {
   const exerciseEntries = useMemo<ExerciseEntry[]>(
     () =>
-      works.flatMap((work) =>
-        work.exercises.map((exercise) => ({
-          key: `${work.id}:${exercise.id}`,
-          workId: work.id,
-          workTitle: work.title,
-          author: work.author,
-          genreLabel: work.genreLabel,
+      [
+        ...works.flatMap((work) =>
+          work.exercises.map((exercise) => ({
+            key: `${work.id}:${exercise.id}`,
+            workId: work.id,
+            workTitle: work.title,
+            author: work.author,
+            genreLabel: work.genreLabel,
+            exercise,
+            source: "work" as const,
+          })),
+        ),
+        ...standaloneExercises.map((exercise) => ({
+          key: `standalone:${exercise.id}`,
+          workId: null,
+          workTitle: "დამოუკიდებელი სავარჯიშო",
+          author: "Kalami",
+          genreLabel: "სავარჯიშოები",
           exercise,
+          source: "standalone" as const,
         })),
-      ),
-    [works],
+      ],
+    [standaloneExercises, works],
   );
 
   const [activeMode, setActiveMode] = useState<ExerciseMode>("multiple_choice");
@@ -119,13 +134,13 @@ export function QuizPage({
           {isAdmin ? (
             <div className="flex flex-wrap gap-2">
               <Link
-                href="/admin"
+                href="/admin/exercises"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white transition hover:bg-white/[0.08]"
               >
                 რედაქტირება
               </Link>
               <Link
-                href="/admin/works/new"
+                href="/admin/exercises/new"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[rgba(244,177,93,0.3)] bg-[rgba(244,177,93,0.12)] px-4 text-sm font-semibold text-[color:var(--gold-soft)] transition hover:bg-[rgba(244,177,93,0.18)]"
               >
                 ახალი სავარჯიშო
@@ -161,9 +176,9 @@ export function QuizPage({
         </div>
         {isAdmin ? (
           <div className="mt-5 flex flex-wrap gap-2">
-            <AdminTypeLink label="არჩევითი ტესტი" href="/admin/works/new?exerciseType=multiple_choice" />
-            <AdminTypeLink label="ტექსტის რედაქტირება" href="/admin/works/new?exerciseType=text_correction" />
-            <AdminTypeLink label="წაკითხულის გააზრება" href="/admin/works/new?exerciseType=reading_comprehension" />
+            <AdminTypeLink label="არჩევითი ტესტი" href="/admin/exercises/new?exerciseType=multiple_choice" />
+            <AdminTypeLink label="ტექსტის რედაქტირება" href="/admin/exercises/new?exerciseType=text_correction" />
+            <AdminTypeLink label="წაკითხულის გააზრება" href="/admin/exercises/new?exerciseType=reading_comprehension" />
             <button
               type="button"
               onClick={() => setActiveMode("exam_mode")}
@@ -216,12 +231,12 @@ export function QuizPage({
           action={<PremiumButton href="/admin" variant="secondary">ადმინის პანელი</PremiumButton>}
         />
       ) : activeMode === "exam_mode" ? (
-        <ExamModePanel entries={exerciseEntries} isAdmin={isAdmin} onEdit={(workId) => `/admin/works/${workId}`} />
+        <ExamModePanel entries={exerciseEntries} isAdmin={isAdmin} onEdit={(entry) => entry.source === "work" ? `/admin/works/${entry.workId}` : `/admin/exercises/${entry.exercise.id}/edit`} />
       ) : filteredEntries.length === 0 ? (
         <EmptyState
           title="ამ ფორმატში სავარჯიშო ჯერ არ არის"
           description="აირჩიე სხვა რეჟიმი ან დაამატე ახალი მასალა ადმინის პანელიდან."
-          action={isAdmin ? <PremiumButton href="/admin/works/new">ახალი სავარჯიშო</PremiumButton> : undefined}
+          action={isAdmin ? <PremiumButton href="/admin/exercises/new">ახალი სავარჯიშო</PremiumButton> : undefined}
         />
       ) : (
         <div className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr]">
@@ -708,7 +723,7 @@ function ExerciseCatalogCard({
       {isAdmin ? (
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            href={`/admin/works/${entry.workId}`}
+            href={entry.source === "work" ? `/admin/works/${entry.workId}` : `/admin/exercises/${entry.exercise.id}/edit`}
             className="rounded-full border border-[color:var(--line)] bg-white/[0.045] px-3 py-1.5 text-xs text-white transition hover:bg-white/[0.08]"
           >
             რედაქტირება
@@ -719,7 +734,7 @@ function ExerciseCatalogCard({
   );
 }
 
-function ExamModePanel({ entries, isAdmin, onEdit }: { entries: ExerciseEntry[]; isAdmin: boolean; onEdit: (workId: string) => string }) {
+function ExamModePanel({ entries, isAdmin, onEdit }: { entries: ExerciseEntry[]; isAdmin: boolean; onEdit: (entry: ExerciseEntry) => string }) {
   const totalCards = entries.length;
   const byType = {
     multipleChoice: entries.filter((entry) => entry.exercise.type === "multiple_choice").length,
@@ -768,7 +783,7 @@ function ExamModePanel({ entries, isAdmin, onEdit }: { entries: ExerciseEntry[];
               {isAdmin ? (
                 <div className="mt-4">
                   <Link
-                    href={onEdit(entry.workId)}
+                    href={onEdit(entry)}
                     className="rounded-full border border-[color:var(--line)] bg-white/[0.045] px-3 py-1.5 text-xs text-white transition hover:bg-white/[0.08]"
                   >
                     რედაქტირება
@@ -870,13 +885,13 @@ function useProgressPersistence({
   totalQuestions,
 }: {
   finished: boolean;
-  workId: string;
+  workId: string | null;
   exerciseId: string;
   correctAnswers: number;
   totalQuestions: number;
 }) {
   useEffect(() => {
-    if (!finished) {
+    if (!finished || !workId) {
       return;
     }
 

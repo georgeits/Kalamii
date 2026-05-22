@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState, GlassCard, Pill, PremiumButton, ProgressBar, SectionTitle, Surface } from "@/components/ui";
 import {
@@ -23,6 +24,8 @@ type ExerciseEntry = {
   genreLabel: string;
   exercise: ExerciseSet;
 };
+
+type ExerciseMode = ExerciseSet["type"] | "exam_mode";
 
 type ExerciseEntryFor<TExercise extends ExerciseSet> = Omit<ExerciseEntry, "exercise"> & {
   exercise: TExercise;
@@ -51,11 +54,13 @@ export function QuizPage({
   progress,
   totalExercises,
   totalQuestions,
+  isAdmin,
 }: {
   works: WorkProfiles;
   progress: ExerciseProgressRecord;
   totalExercises: number;
   totalQuestions: number;
+  isAdmin: boolean;
 }) {
   const exerciseEntries = useMemo<ExerciseEntry[]>(
     () =>
@@ -72,21 +77,103 @@ export function QuizPage({
     [works],
   );
 
-  const [selectedKey, setSelectedKey] = useState(exerciseEntries[0]?.key ?? "");
+  const [activeMode, setActiveMode] = useState<ExerciseMode>("multiple_choice");
+  const filteredEntries = useMemo(
+    () => (activeMode === "exam_mode" ? exerciseEntries : exerciseEntries.filter((entry) => entry.exercise.type === activeMode)),
+    [activeMode, exerciseEntries],
+  );
+  const [selectedKey, setSelectedKey] = useState(filteredEntries[0]?.key ?? exerciseEntries[0]?.key ?? "");
   const [attempt, setAttempt] = useState(0);
-  const effectiveSelectedKey = exerciseEntries.some((entry) => entry.key === selectedKey)
+  const hasProgress =
+    progress.completedExercises > 0 || progress.correctAnswers > 0 || progress.streak > 0 || progress.progressPercentage > 0;
+  const effectiveSelectedKey = filteredEntries.some((entry) => entry.key === selectedKey)
     ? selectedKey
-    : (exerciseEntries[0]?.key ?? "");
-  const selectedEntry = exerciseEntries.find((entry) => entry.key === effectiveSelectedKey) ?? null;
+    : (filteredEntries[0]?.key ?? "");
+  const selectedEntry = filteredEntries.find((entry) => entry.key === effectiveSelectedKey) ?? null;
+
+  useEffect(() => {
+    if (!filteredEntries.some((entry) => entry.key === selectedKey)) {
+      setSelectedKey(filteredEntries[0]?.key ?? "");
+      setAttempt(0);
+    }
+  }, [filteredEntries, selectedKey]);
 
   return (
     <main className="space-y-6 pb-8">
       <SectionTitle
         eyebrow="სავარჯიშოები"
         title="გასააზრებელი და სავარჯიშოები"
-        description="არჩევითი კითხვები, ტექსტის რედაქტირება და წაკითხულის გააზრება ახლა ერთ სასწავლო სივრცეშია გაერთიანებული."
+        description="არჩევითი ტესტები, ტექსტის რედაქტირება, წაკითხულის გააზრება და გამოცდის რეჟიმი ახლა ერთ სასწავლო სივრცეშია გაერთიანებული."
         action={<PremiumButton href="/works">ნაწარმოებების გახსნა</PremiumButton>}
       />
+
+      <GlassCard className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <p className="text-sm text-[color:var(--gold-soft)]">რეჟიმები</p>
+            <h2 className="mt-2 font-serif text-2xl text-white">აირჩიე სასწავლო ფორმატი</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-[color:var(--muted)]">
+              ერთი გვერდიდან გადადი კონკრეტულ სავარჯიშოზე ან გახსენი შერეული გამოცდის რეჟიმი.
+            </p>
+          </div>
+          {isAdmin ? (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/admin"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--line)] bg-white/[0.045] px-4 text-sm text-white transition hover:bg-white/[0.08]"
+              >
+                რედაქტირება
+              </Link>
+              <Link
+                href="/admin/works/new"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-[rgba(244,177,93,0.3)] bg-[rgba(244,177,93,0.12)] px-4 text-sm font-semibold text-[color:var(--gold-soft)] transition hover:bg-[rgba(244,177,93,0.18)]"
+              >
+                ახალი სავარჯიშო
+              </Link>
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+          <ModeCard
+            title="არჩევითი ტესტები"
+            description="სწრაფი პრაქტიკა 4-პასუხიანი კითხვებით."
+            active={activeMode === "multiple_choice"}
+            onClick={() => setActiveMode("multiple_choice")}
+          />
+          <ModeCard
+            title="ტექსტის რედაქტირება"
+            description="იპოვე შეცდომები და შეადარე სწორ ვერსიას."
+            active={activeMode === "text_correction"}
+            onClick={() => setActiveMode("text_correction")}
+          />
+          <ModeCard
+            title="წაკითხულის გააზრება"
+            description="იმუშავე პასაჟებზე, მოკლე პასუხებზე და true/false-ზე."
+            active={activeMode === "reading_comprehension"}
+            onClick={() => setActiveMode("reading_comprehension")}
+          />
+          <ModeCard
+            title="გამოცდის რეჟიმი"
+            description="შერეული სესია ყველა ფორმატიდან ერთ ნაკადად."
+            active={activeMode === "exam_mode"}
+            onClick={() => setActiveMode("exam_mode")}
+          />
+        </div>
+        {isAdmin ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            <AdminTypeLink label="არჩევითი ტესტი" href="/admin/works/new?exerciseType=multiple_choice" />
+            <AdminTypeLink label="ტექსტის რედაქტირება" href="/admin/works/new?exerciseType=text_correction" />
+            <AdminTypeLink label="წაკითხულის გააზრება" href="/admin/works/new?exerciseType=reading_comprehension" />
+            <button
+              type="button"
+              onClick={() => setActiveMode("exam_mode")}
+              className="rounded-full border border-[color:var(--line)] bg-white/[0.045] px-4 py-2 text-sm text-[color:var(--muted)] transition hover:bg-white/[0.08] hover:text-white"
+            >
+              გამოცდის რეჟიმი
+            </button>
+          </div>
+        ) : null}
+      </GlassCard>
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <GlassCard className="p-5 sm:p-6">
@@ -95,17 +182,18 @@ export function QuizPage({
               <p className="text-sm text-[color:var(--gold-soft)]">სწავლის პროგრესი</p>
               <h3 className="mt-2 font-serif text-3xl text-white">სწორი რიტმით ივარჯიშე</h3>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--muted)]">
-                აირჩიე სავარჯიშო, დაასრულე attempt-ი და სისტემა დაითვლის დასრულებულ სავარჯიშოებს, სწორ პასუხებს და სტრიქს.
+                პროგრესი აისახება მხოლოდ რეალურად დასრულებული სავარჯიშოებიდან და შენახული მცდელობებიდან.
               </p>
             </div>
             <Pill tone="gold">{totalExercises} სავარჯიშო</Pill>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="დასრულებული" value={String(progress.completedExercises)} detail="completed" />
-            <Stat label="სწორი პასუხები" value={String(progress.correctAnswers)} detail="answers" />
-            <Stat label="სტრიქი" value={`${progress.streak}`} detail="days" />
+            <Stat label="დასრულებული" value={String(progress.completedExercises)} detail="სავარჯიშო" />
+            <Stat label="პასუხები" value={String(progress.correctAnswers)} detail="სწორი" />
+            <Stat label="დღე" value={`${progress.streak}`} detail="სტრიქი" />
             <Stat label="პროგრესი" value={`${progress.progressPercentage}%`} detail={`${totalQuestions} კითხვა`} />
           </div>
+          {!hasProgress ? <p className="mt-5 text-center text-sm text-[color:var(--muted)]">პროგრესი ჯერ არ არის დაწყებული.</p> : null}
           <div className="mt-5">
             <ProgressBar value={progress.progressPercentage} />
           </div>
@@ -127,45 +215,35 @@ export function QuizPage({
           description="ადმინის პანელიდან დაამატეთ პირველი არჩევითი, ტექსტის რედაქტირების ან წაკითხულის გააზრების სავარჯიშო."
           action={<PremiumButton href="/admin" variant="secondary">ადმინის პანელი</PremiumButton>}
         />
+      ) : activeMode === "exam_mode" ? (
+        <ExamModePanel entries={exerciseEntries} isAdmin={isAdmin} onEdit={(workId) => `/admin/works/${workId}`} />
+      ) : filteredEntries.length === 0 ? (
+        <EmptyState
+          title="ამ ფორმატში სავარჯიშო ჯერ არ არის"
+          description="აირჩიე სხვა რეჟიმი ან დაამატე ახალი მასალა ადმინის პანელიდან."
+          action={isAdmin ? <PremiumButton href="/admin/works/new">ახალი სავარჯიშო</PremiumButton> : undefined}
+        />
       ) : (
         <div className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr]">
           <GlassCard className="p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-serif text-2xl text-white">სავარჯიშოების კატალოგი</h3>
-              <Pill tone="sky">{exerciseEntries.length} ბარათი</Pill>
+              <Pill tone="sky">{filteredEntries.length} ბარათი</Pill>
             </div>
             <div className="mt-5 grid gap-3">
-              {exerciseEntries.map((entry) => {
+              {filteredEntries.map((entry) => {
                 const isActive = entry.key === effectiveSelectedKey;
                 return (
-                  <button
+                  <ExerciseCatalogCard
                     key={entry.key}
-                    type="button"
-                    onClick={() => {
+                    entry={entry}
+                    isActive={isActive}
+                    isAdmin={isAdmin}
+                    onSelect={() => {
                       setSelectedKey(entry.key);
                       setAttempt((value) => value + 1);
                     }}
-                    className={`rounded-[18px] border p-4 text-left transition ${
-                      isActive
-                        ? "border-[rgba(244,177,93,0.34)] bg-[rgba(244,177,93,0.12)]"
-                        : "border-[color:var(--line)] bg-white/[0.045] hover:bg-white/[0.07]"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-white">{entry.exercise.title}</p>
-                        <p className="mt-1 text-sm text-[color:var(--muted)]">{entry.workTitle}</p>
-                        <p className="mt-1 text-xs text-[color:var(--muted)]">{entry.author}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Pill tone="gold">{getExerciseTypeLabel(entry.exercise.type)}</Pill>
-                        <Pill tone="rose">{getDifficultyLabel(entry.exercise.difficulty)}</Pill>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
-                      {entry.exercise.description?.trim() || "კომპაქტური სასწავლო ბარათი სწრაფი პრაქტიკისთვის."}
-                    </p>
-                  </button>
+                  />
                 );
               })}
             </div>
@@ -554,12 +632,165 @@ function FormatCard({ title, description }: { title: string; description: string
   );
 }
 
+function ModeCard({
+  title,
+  description,
+  active,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-[20px] border p-4 text-left transition ${
+        active
+          ? "border-[rgba(244,177,93,0.34)] bg-[rgba(244,177,93,0.12)]"
+          : "border-[color:var(--line)] bg-white/[0.04] hover:bg-white/[0.07]"
+      }`}
+    >
+      <p className="font-semibold text-white">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{description}</p>
+    </button>
+  );
+}
+
+function AdminTypeLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-full border border-[color:var(--line)] bg-white/[0.045] px-4 py-2 text-sm text-[color:var(--muted)] transition hover:bg-white/[0.08] hover:text-white"
+    >
+      {label}
+    </Link>
+  );
+}
+
+function ExerciseCatalogCard({
+  entry,
+  isActive,
+  isAdmin,
+  onSelect,
+}: {
+  entry: ExerciseEntry;
+  isActive: boolean;
+  isAdmin: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      className={`rounded-[18px] border p-4 transition ${
+        isActive
+          ? "border-[rgba(244,177,93,0.34)] bg-[rgba(244,177,93,0.12)]"
+          : "border-[color:var(--line)] bg-white/[0.045] hover:bg-white/[0.07]"
+      }`}
+    >
+      <button type="button" onClick={onSelect} className="w-full text-left">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold text-white">{entry.exercise.title}</p>
+            <p className="mt-1 text-sm text-[color:var(--muted)]">{entry.workTitle}</p>
+            <p className="mt-1 text-xs text-[color:var(--muted)]">{entry.author}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Pill tone="gold">{getExerciseTypeLabel(entry.exercise.type)}</Pill>
+            <Pill tone="rose">{getDifficultyLabel(entry.exercise.difficulty)}</Pill>
+          </div>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
+          {entry.exercise.description?.trim() || "კომპაქტური სასწავლო ბარათი სწრაფი პრაქტიკისთვის."}
+        </p>
+      </button>
+      {isAdmin ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href={`/admin/works/${entry.workId}`}
+            className="rounded-full border border-[color:var(--line)] bg-white/[0.045] px-3 py-1.5 text-xs text-white transition hover:bg-white/[0.08]"
+          >
+            რედაქტირება
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ExamModePanel({ entries, isAdmin, onEdit }: { entries: ExerciseEntry[]; isAdmin: boolean; onEdit: (workId: string) => string }) {
+  const totalCards = entries.length;
+  const byType = {
+    multipleChoice: entries.filter((entry) => entry.exercise.type === "multiple_choice").length,
+    textCorrection: entries.filter((entry) => entry.exercise.type === "text_correction").length,
+    reading: entries.filter((entry) => entry.exercise.type === "reading_comprehension").length,
+  };
+
+  return (
+    <div className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr]">
+      <GlassCard className="p-5 sm:p-6">
+        <p className="text-sm text-[color:var(--gold-soft)]">გამოცდის რეჟიმი</p>
+        <h3 className="mt-2 font-serif text-3xl text-white">შერეული სავარჯიშო სესია</h3>
+        <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
+          ამ რეჟიმში ერთ სივრცეში აგროვებ არჩევით ტესტებს, ტექსტის რედაქტირებას და წაკითხულის გააზრებას.
+        </p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <Stat label="არჩევითი" value={String(byType.multipleChoice)} detail="ბარათი" />
+          <Stat label="რედაქტირება" value={String(byType.textCorrection)} detail="ბარათი" />
+          <Stat label="გააზრება" value={String(byType.reading)} detail="ბარათი" />
+        </div>
+        <div className="mt-5 rounded-[18px] border border-[color:var(--line)] bg-white/[0.04] p-4">
+          <p className="text-sm text-[color:var(--muted)]">სულ ხელმისაწვდომია</p>
+          <p className="mt-2 font-display text-4xl text-white">{totalCards}</p>
+          <p className="mt-2 text-sm text-[color:var(--gold-soft)]">სავარჯიშო გამოცდის რეჟიმისთვის</p>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-serif text-2xl text-white">გამოცდის რეჟიმში ჩასართავი მასალა</h3>
+          <Pill tone="sky">{totalCards} ბარათი</Pill>
+        </div>
+        <div className="mt-5 grid gap-3">
+          {entries.map((entry) => (
+            <div key={entry.key} className="rounded-[18px] border border-[color:var(--line)] bg-white/[0.045] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-white">{entry.exercise.title}</p>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">{entry.workTitle}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Pill tone="gold">{getExerciseTypeLabel(entry.exercise.type)}</Pill>
+                  <Pill tone="rose">{getDifficultyLabel(entry.exercise.difficulty)}</Pill>
+                </div>
+              </div>
+              {isAdmin ? (
+                <div className="mt-4">
+                  <Link
+                    href={onEdit(entry.workId)}
+                    className="rounded-full border border-[color:var(--line)] bg-white/[0.045] px-3 py-1.5 text-xs text-white transition hover:bg-white/[0.08]"
+                  >
+                    რედაქტირება
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 function Stat({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <Surface className="p-4">
-      <p className="text-xs text-[color:var(--muted)]">{label}</p>
-      <p className="mt-2 font-display text-3xl text-white">{value}</p>
-      <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[color:var(--gold-soft)]">{detail}</p>
+    <Surface className="flex min-h-32 items-center justify-center p-4">
+      <div className="flex w-full flex-col items-center justify-center text-center">
+        <p className="font-display text-3xl text-white sm:text-[2rem]">{value}</p>
+        <p className="mt-2 text-sm font-medium text-[color:var(--gold-soft)]">{label}</p>
+        <p className="mt-1 text-xs tracking-[0.04em] text-[color:var(--muted)]">{detail}</p>
+      </div>
     </Surface>
   );
 }

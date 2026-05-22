@@ -6,6 +6,7 @@ import { getCurrentProfile, getExerciseProgress, getWorkProfiles } from "@/src/l
 export default async function Quiz() {
   const works = await getWorkProfiles();
   const profile = await getCurrentProfile();
+  const isAdmin = profile?.role === "admin";
   const totalExercises = works.reduce((sum, work) => sum + work.exercises.length, 0);
   const totalQuestions = works.reduce(
     (sum, work) => sum + work.exercises.reduce((exerciseSum, exercise) => exerciseSum + countExerciseQuestions(exercise), 0),
@@ -15,7 +16,7 @@ export default async function Quiz() {
 
   return (
     <AppShell currentPath="/quiz">
-      <QuizPage works={works} progress={progress} totalExercises={totalExercises} totalQuestions={totalQuestions} />
+      <QuizPage works={works} progress={progress} totalExercises={totalExercises} totalQuestions={totalQuestions} isAdmin={isAdmin} />
     </AppShell>
   );
 }

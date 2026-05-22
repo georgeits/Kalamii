@@ -27,10 +27,10 @@ const pricingPlans = [
     description: "სრული საგამოცდო მზადებისთვის",
     features: [
       "სრული ბიბლიოთეკა",
-      "გამოცდის სიმულაცია",
-      "ესეს გეგმები",
+      "სავარჯიშოები და გამოცდის რეჟიმი",
       "დეტალური ანალიზები",
       "პრიორიტეტული ახალი მასალები",
+      "პროგრესის სრული ნახვა",
     ],
     ctaLabel: "შეძენა — 10₾",
     href: "/register?plan=premium",
@@ -65,7 +65,7 @@ export default function Home() {
             ქართული ენისა და ლიტერატურის სამეცადინო პლატფორმა
           </h1>
           <p className="fade-up mt-6 max-w-2xl text-base leading-7 text-[color:var(--muted)] [animation-delay:160ms] sm:text-lg">
-            შინაარსები, ავტორები, ნაწარმოებები, ტესტები და გეგმები ერთ სივრცეში.
+            შინაარსები, ავტორები, ნაწარმოებები და სავარჯიშოები ერთ სუფთა სასწავლო სივრცეში.
           </p>
           <div className="fade-up mt-9 flex w-full flex-col justify-center gap-3 [animation-delay:240ms] sm:w-auto sm:flex-row">
             <Link

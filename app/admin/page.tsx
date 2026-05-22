@@ -11,7 +11,11 @@ import {
   getWorks,
 } from "@/src/lib/content";
 
-export default async function Admin() {
+export default async function Admin({
+  searchParams,
+}: {
+  searchParams: Promise<{ paymentStatus?: string; paymentMessage?: string }>;
+}) {
   const profile = await getCurrentProfile();
 
   if (!profile) {
@@ -22,7 +26,8 @@ export default async function Admin() {
     redirect("/dashboard");
   }
 
-  const [authors, works, subscriptions, paymentRequests, libraryData] = await Promise.all([
+  const [{ paymentStatus, paymentMessage }, authors, works, subscriptions, paymentRequests, libraryData] = await Promise.all([
+    searchParams,
     getAuthors(),
     getWorks(),
     getSubscriptions(),
@@ -37,6 +42,8 @@ export default async function Admin() {
         works={works}
         subscriptions={subscriptions}
         paymentRequests={paymentRequests}
+        initialPaymentStatus={paymentStatus}
+        paymentMessage={paymentMessage}
         featuredAuthorId={libraryData.featuredAuthorId}
       />
     </AppShell>

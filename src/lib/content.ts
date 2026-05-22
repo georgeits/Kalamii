@@ -5,6 +5,7 @@ import { normalizeExerciseSets, type ExerciseProgressRecord, type ExerciseSet } 
 import { PLAN_PRICES, type PaidPlan } from "@/src/lib/plans";
 import { normalizeSearchValue } from "@/src/lib/search";
 import { ensureSlug } from "@/src/lib/slug";
+import { createAdminClient } from "@/src/lib/supabase/admin";
 import { createClient } from "@/src/lib/supabase/server";
 
 export type QuizQuestion = {
@@ -55,6 +56,7 @@ export type PaymentRequestRecord = {
   amount: number;
   receipt_url: string;
   receipt_signed_url?: string | null;
+  receipt_preview_error?: string | null;
   comment: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
@@ -412,6 +414,7 @@ export async function getSubscriptions() {
 
 export async function getPaymentRequests() {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const { data, error } = await supabase
     .from("payment_requests")
     .select("id, user_id, full_name, email, plan, amount, receipt_url, comment, status, created_at, reviewed_at, reviewed_by")
@@ -442,15 +445,24 @@ export async function getPaymentRequests() {
 
   const signedUrls = await Promise.all(
     requests.map(async (request) => {
-      const { data: signedData } = await supabase.storage.from("payment-receipts").createSignedUrl(request.receipt_url, 60 * 60);
-      return [request.id, signedData?.signedUrl ?? null] as const;
+      const { data: signedData, error: signedError } = await adminSupabase.storage
+        .from("payment-receipts")
+        .createSignedUrl(request.receipt_url, 60 * 60);
+      return [
+        request.id,
+        {
+          signedUrl: signedData?.signedUrl ?? null,
+          error: signedError ? "ქვითრის ნახვა ვერ მოხერხდა." : null,
+        },
+      ] as const;
     }),
   );
 
   const signedUrlMap = new Map(signedUrls);
   return requests.map((request) => ({
     ...request,
-    receipt_signed_url: signedUrlMap.get(request.id) ?? null,
+    receipt_signed_url: signedUrlMap.get(request.id)?.signedUrl ?? null,
+    receipt_preview_error: signedUrlMap.get(request.id)?.error ?? null,
   }));
 }
 

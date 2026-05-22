@@ -327,7 +327,7 @@ export async function reviewPaymentRequestAction(formData: FormData) {
   }
 
   revalidateContentRoutes();
-  redirect("/admin");
+  redirect(`/admin?paymentStatus=${decision === "approve" ? "approved" : "rejected"}&paymentMessage=${encodeURIComponent(decision === "approve" ? "მოთხოვნა დადასტურებულია" : "მოთხოვნა უარყოფილია")}`);
 }
 
 export async function updateSubscriptionAction(formData: FormData) {

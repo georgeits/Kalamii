@@ -1,6 +1,7 @@
 import { genres, literaryPeriods } from "@/data/taxonomy";
 import { getAccessLevelLabel, type AccessLevel } from "@/src/lib/access";
 import { ADMIN_EMAIL, isAdminEmail } from "@/src/lib/auth";
+import { normalizeExerciseSets, type ExerciseProgressRecord, type ExerciseSet } from "@/src/lib/exercises";
 import { normalizeSearchValue } from "@/src/lib/search";
 import { ensureSlug } from "@/src/lib/slug";
 import { createClient } from "@/src/lib/supabase/server";
@@ -69,6 +70,7 @@ export type WorkRecord = {
   plan?: string | null;
   analysis?: string | null;
   quiz_data?: QuizQuestion[] | null;
+  exercise_data?: ExerciseSet[] | null;
   themes: string[];
   characters: string[];
   symbols: string[];
@@ -131,7 +133,7 @@ async function fetchAuthors(supabase: Awaited<ReturnType<typeof createClient>>) 
 async function fetchWorks(supabase: Awaited<ReturnType<typeof createClient>>) {
   const fullResult = await supabase
     .from("works")
-    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, exercise_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
     .order("title");
 
   if (!fullResult.error) {
@@ -143,6 +145,7 @@ async function fetchWorks(supabase: Awaited<ReturnType<typeof createClient>>) {
     "works.plan",
     "works.analysis",
     "works.quiz_data",
+    "works.exercise_data",
     "authors.image_url",
   ];
 
@@ -165,6 +168,7 @@ async function fetchWorks(supabase: Awaited<ReturnType<typeof createClient>>) {
     plan: null,
     analysis: null,
     quiz_data: [],
+    exercise_data: [],
     author: work.author ? { ...work.author, image_url: null } : null,
   }));
 }
@@ -177,6 +181,7 @@ function normalizeWorks(rows: Record<string, unknown>[]) {
     return {
       ...work,
       slug: ensureSlug(String(work.slug ?? work.title ?? ""), `work-${String(work.id ?? "").slice(0, 8)}`),
+      exercise_data: normalizeExerciseSets(work.exercise_data, (work.quiz_data as QuizQuestion[] | null | undefined) ?? []),
       author: authorRecord
         ? {
             id: String((authorRecord as Record<string, unknown>).id ?? ""),
@@ -418,17 +423,26 @@ export async function getWorkProfiles() {
     periodLabel: work.author ? literaryPeriods[work.author.period] : "",
     movement: work.author?.movement ?? "",
     accessLevelLabel: getAccessLevelLabel(work.access_level),
+    exercises: normalizeExerciseSets(work.exercise_data, work.quiz_data ?? []),
   }));
 }
 
 export async function getWorkDetail(slug: string) {
   const normalizedSlug = normalizeSearchValue(slug);
   const supabase = await createClient();
-  const directResult = await supabase
+  let directResult = await supabase
     .from("works")
-    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+    .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, exercise_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
     .eq("slug", slug)
     .maybeSingle();
+
+  if (directResult.error && isMissingColumnError(directResult.error.message, "works.exercise_data")) {
+    directResult = await supabase
+      .from("works")
+      .select("id, slug, title, author_id, genre, summary, summary_chapters, plan, analysis, quiz_data, themes, characters, symbols, exam_tips, access_level, created_at, updated_at, author:authors(id, slug, name, period, movement, image_url)")
+      .eq("slug", slug)
+      .maybeSingle();
+  }
 
   if (directResult.error && process.env.NODE_ENV !== "production") {
     console.error("Direct work slug query failed", {
@@ -448,6 +462,7 @@ export async function getWorkDetail(slug: string) {
       periodLabel: work.author ? literaryPeriods[work.author.period] : "",
       movement: work.author?.movement ?? "",
       accessLevelLabel: getAccessLevelLabel(work.access_level),
+      exercises: normalizeExerciseSets(work.exercise_data, work.quiz_data ?? []),
     };
   }
 
@@ -473,7 +488,71 @@ export async function getWorkDetail(slug: string) {
     periodLabel: work.author ? literaryPeriods[work.author.period] : "",
     movement: work.author?.movement ?? "",
     accessLevelLabel: getAccessLevelLabel(work.access_level),
+    exercises: normalizeExerciseSets(work.exercise_data, work.quiz_data ?? []),
   };
+}
+
+export async function getExerciseProgress(userId: string, totalExercises: number): Promise<ExerciseProgressRecord> {
+  if (!userId || totalExercises === 0) {
+    return { completedExercises: 0, correctAnswers: 0, streak: 0, progressPercentage: 0 };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("exercise_attempts")
+      .select("exercise_id, correct_answers, completed_at")
+      .eq("user_id", userId);
+
+    if (error) {
+      return { completedExercises: 0, correctAnswers: 0, streak: 0, progressPercentage: 0 };
+    }
+
+    const attempts = (data ?? []) as Array<{ exercise_id: string; correct_answers: number; completed_at: string }>;
+    const completedIds = new Set(attempts.map((attempt) => attempt.exercise_id));
+    const correctAnswers = attempts.reduce((sum, attempt) => sum + Number(attempt.correct_answers ?? 0), 0);
+    const progressPercentage = Math.round((completedIds.size / totalExercises) * 100);
+
+    return {
+      completedExercises: completedIds.size,
+      correctAnswers,
+      streak: calculateStreak(attempts.map((attempt) => attempt.completed_at)),
+      progressPercentage,
+    };
+  } catch {
+    return { completedExercises: 0, correctAnswers: 0, streak: 0, progressPercentage: 0 };
+  }
+}
+
+function calculateStreak(values: string[]) {
+  const uniqueDays = [...new Set(values.map((value) => new Date(value).toISOString().slice(0, 10)))].sort().reverse();
+  if (uniqueDays.length === 0) {
+    return 0;
+  }
+
+  let streak = 0;
+  let current = new Date(uniqueDays[0]);
+
+  for (const day of uniqueDays) {
+    const normalizedDay = new Date(day);
+    const diff = Math.round((current.getTime() - normalizedDay.getTime()) / 86400000);
+
+    if (streak === 0 || diff === 0) {
+      streak += streak === 0 ? 1 : 0;
+      current = normalizedDay;
+      continue;
+    }
+
+    if (diff === 1) {
+      streak += 1;
+      current = normalizedDay;
+      continue;
+    }
+
+    break;
+  }
+
+  return streak;
 }
 
 export async function getWorkById(id: string) {
@@ -499,6 +578,44 @@ export async function getLibraryData() {
     works,
     featuredAuthor,
     featuredAuthorId: siteSettings?.featured_author_id ?? null,
+  };
+}
+
+export async function getDashboardData() {
+  const [authors, works] = await Promise.all([getAuthorsWithWorks(), getWorkProfiles()]);
+
+  const popularAuthors = [...authors]
+    .sort((left, right) => {
+      if (right.works.length !== left.works.length) {
+        return right.works.length - left.works.length;
+      }
+
+      return (right.updated_at ?? right.created_at ?? "").localeCompare(left.updated_at ?? left.created_at ?? "");
+    })
+    .slice(0, 4);
+
+  const popularWorks = [...works]
+    .sort((left, right) => {
+      const leftQuizCount = left.quiz_data?.length ?? 0;
+      const rightQuizCount = right.quiz_data?.length ?? 0;
+
+      if (rightQuizCount !== leftQuizCount) {
+        return rightQuizCount - leftQuizCount;
+      }
+
+      return (right.updated_at ?? right.created_at ?? "").localeCompare(left.updated_at ?? left.created_at ?? "");
+    })
+    .slice(0, 6);
+
+  const newTests = works
+    .filter((work) => (work.quiz_data?.length ?? 0) > 0)
+    .sort((left, right) => (right.updated_at ?? right.created_at ?? "").localeCompare(left.updated_at ?? left.created_at ?? ""))
+    .slice(0, 4);
+
+  return {
+    popularAuthors,
+    popularWorks,
+    newTests,
   };
 }
 

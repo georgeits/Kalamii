@@ -8,7 +8,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "ბიბლიოთეკა", href: "/library" },
   { label: "ავტორები", href: "/authors" },
   { label: "ნაწარმოებები", href: "/works" },
-  { label: "ტესტები", href: "/quiz" },
+  { label: "სავარჯიშოები", href: "/quiz" },
   { label: "გამოცდის სიმულაცია", href: "/quiz#simulation" },
   { label: "ესეს გეგმები", href: "/library#plans" },
   { label: "პროგრესი", href: "/dashboard#progress" },

@@ -92,7 +92,7 @@ export function AdminWorkEditor({
       <SectionTitle
         eyebrow="CMS • ნაწარმოები"
         title={mode === "create" ? "ახალი ნაწარმოები" : work?.title ?? "ნაწარმოების რედაქტირება"}
-        description="აქედან შეგიძლიათ ერთ ჩანაწერში მართოთ გეგმა, შინაარსის თავები, ანალიზი და ტესტები."
+        description="აქედან შეგიძლიათ ერთ ჩანაწერში მართოთ გეგმა, შინაარსის თავები, ანალიზი და სავარჯიშოები."
         action={<Link href="/admin" className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-white transition hover:bg-white/8">უკან</Link>}
       />
 
@@ -134,8 +134,9 @@ export function AdminWorkEditor({
           <WorkStructuredFields
             chapterFieldName="summary_chapters"
             quizFieldName="quiz_questions"
+            exerciseFieldName="exercise_data"
             initialChapters={work?.summary_chapters ?? []}
-            initialQuestions={work?.quiz_data ?? []}
+            initialExercises={work?.exercise_data ?? []}
           />
           <TextAreaField label="ანალიზი" name="analysis" defaultValue={work?.analysis ?? ""} rows={8} />
           <div className="grid gap-4 md:grid-cols-2">

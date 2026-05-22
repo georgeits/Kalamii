@@ -7,6 +7,7 @@ import { AuthorPortrait } from "@/components/author-portrait";
 import { WorkInlineEditor } from "@/components/public-inline-editors";
 import { GlassCard, Pill, PremiumButton, SectionTitle, Surface } from "@/components/ui";
 import { hasAccessToLevel, type AccessLevel } from "@/src/lib/access";
+import { getExerciseTypeLabel, type ExerciseSet } from "@/src/lib/exercises";
 import type { getWorkDetail, QuizQuestion } from "@/src/lib/content";
 
 type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
@@ -16,7 +17,7 @@ export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; 
   const hasPlan = Boolean(work.plan?.trim());
   const hasChapters = Boolean((work.summary_chapters ?? []).length);
   const hasAnalysis = Boolean(work.analysis?.trim());
-  const hasQuiz = Boolean((work.quiz_data ?? []).length);
+  const hasExercises = Boolean((work.exercises ?? []).length || (work.quiz_data ?? []).length);
 
   return (
     <main className="space-y-6 pb-8">
@@ -50,8 +51,8 @@ export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; 
         <>
           {(isAdmin || hasPlan) ? <ContentSection title="გეგმა" body={work.plan} /> : null}
           {(isAdmin || hasChapters) ? <ChapterSection chapters={work.summary_chapters ?? []} /> : null}
-          {(isAdmin || hasAnalysis) ? <ContentSection title="ანალიზი" body={work.analysis} /> : null}
-          {(isAdmin || hasQuiz) ? <QuizSection questions={work.quiz_data ?? []} /> : null}
+          {(isAdmin || hasAnalysis) ? <ContentSection title="ანალიზი" body={work.analysis} collapsible /> : null}
+          {(isAdmin || hasExercises) ? <ExerciseSection exercises={work.exercises ?? []} questions={work.quiz_data ?? []} /> : null}
         </>
       ) : (
         <LockedContent requiredLevel={work.access_level} />
@@ -63,75 +64,116 @@ export function WorkDetailPage({ work, isAdmin, userPlan }: { work: WorkDetail; 
 function ContentSection({
   title,
   body,
+  collapsible = false,
 }: {
   title: string;
   body?: string | null;
+  collapsible?: boolean;
 }) {
+  const content = body?.trim();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldCollapse = collapsible && Boolean(content);
+
+  if (!content) {
+    return null;
+  }
+
   return (
     <GlassCard className="p-6">
       <h3 className="font-serif text-2xl text-white">{title}</h3>
-      {body?.trim() ? (
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)]">{body}</p>
-      ) : (
-        <EmptyCopy text="მასალა ჯერ არ არის დამატებული" />
-      )}
+      <div className="relative mt-4 max-w-3xl">
+        <p
+          className={`whitespace-pre-wrap text-[15px] leading-8 text-[color:var(--muted)] sm:text-base sm:leading-8 ${
+            isExpanded || !shouldCollapse ? "" : "line-clamp-6"
+          }`}
+        >
+          {content}
+        </p>
+        {shouldCollapse && !isExpanded ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-18 bg-[linear-gradient(180deg,rgba(11,20,35,0),rgba(11,20,35,0.94))]" />
+        ) : null}
+      </div>
+      {shouldCollapse ? (
+        <button
+          type="button"
+          onClick={() => setIsExpanded((value) => !value)}
+          className="mt-4 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[color:var(--gold-soft)] transition hover:bg-white/8"
+        >
+          {isExpanded ? "ნაკლების ნახვა" : "მეტის ნახვა"}
+        </button>
+      ) : null}
     </GlassCard>
   );
 }
 
 function ChapterSection({ chapters }: { chapters: WorkDetail["summary_chapters"] }) {
   const safeChapters = chapters ?? [];
+  if (safeChapters.length === 0) {
+    return null;
+  }
+
   const [activeChapterId, setActiveChapterId] = useState(safeChapters[0]?.id ?? "");
   const activeChapter = safeChapters.find((item) => item.id === activeChapterId) ?? safeChapters[0];
 
   return (
     <GlassCard className="p-6">
       <h3 className="font-serif text-2xl text-white">შინაარსი</h3>
-      {safeChapters.length > 0 ? (
-          <>
-            <div className="mt-5 flex flex-wrap gap-3">
-            {safeChapters.map((chapter, index) => {
-              const isActive = chapter.id === activeChapter?.id;
-              const chapterLabel = chapter.title || `თავი ${index + 1}`;
-              return (
-                <button
-                  key={chapter.id}
-                  type="button"
-                  onClick={() => setActiveChapterId(chapter.id)}
-                  className={`min-h-0 rounded-[14px] border px-3.5 py-2 text-left text-sm transition sm:px-4 ${
-                    isActive
-                      ? "border-[rgba(244,177,93,0.32)] bg-[rgba(244,177,93,0.12)] text-white"
-                      : "border-[color:var(--line)] bg-white/[0.035] text-[color:var(--muted)] hover:bg-white/[0.06] hover:text-white"
-                  }`}
-                >
-                  <span className="block font-semibold leading-5">{chapterLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-5 overflow-hidden rounded-[18px] border border-[color:var(--line)] bg-white/[0.035] p-5 transition-all duration-300">
+      <>
+        <div className="mt-5 flex flex-wrap gap-3">
+          {safeChapters.map((chapter, index) => {
+            const isActive = chapter.id === activeChapter?.id;
+            const chapterLabel = chapter.title || `თავი ${index + 1}`;
+            return (
+              <button
+                key={chapter.id}
+                type="button"
+                onClick={() => setActiveChapterId(chapter.id)}
+                className={`min-h-0 rounded-[14px] border px-3.5 py-2 text-left text-sm transition sm:px-4 ${
+                  isActive
+                    ? "border-[rgba(244,177,93,0.32)] bg-[rgba(244,177,93,0.12)] text-white"
+                    : "border-[color:var(--line)] bg-white/[0.035] text-[color:var(--muted)] hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                <span className="block font-semibold leading-5">{chapterLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-5 overflow-hidden rounded-[18px] border border-[color:var(--line)] bg-white/[0.035] p-5 transition-all duration-300">
+          <div className="max-w-3xl">
             <h4 className="font-semibold text-white">{activeChapter?.title}</h4>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)]">{activeChapter?.body}</p>
+            <p className="mt-3 whitespace-pre-wrap text-[15px] leading-8 text-[color:var(--muted)] sm:text-base">{activeChapter?.body}</p>
           </div>
-        </>
-      ) : (
-        <EmptyCopy text="მასალა ჯერ არ არის დამატებული" />
-      )}
+        </div>
+      </>
     </GlassCard>
   );
 }
 
-function QuizSection({ questions }: { questions: QuizQuestion[] }) {
+function ExerciseSection({ questions, exercises }: { questions: QuizQuestion[]; exercises: ExerciseSet[] }) {
+  const availableExercises = useMemo(() => (exercises.length > 0 ? exercises : []), [exercises]);
   const [attempt, setAttempt] = useState(0);
   const normalizedQuestions = useMemo(
-    () =>
-      questions
+    () => {
+      const simpleQuestions =
+        availableExercises.length === 0
+          ? questions
+          : availableExercises[0]?.type === "multiple_choice"
+            ? availableExercises[0].content.questions.map((question) => ({
+                id: question.id,
+                question: question.prompt,
+                options: question.options,
+              }))
+            : [];
+
+      return simpleQuestions
         .filter((question) => question.question?.trim() && question.options?.length === 4)
         .map((question, index) => ({
           ...question,
           options: shuffleArray(question.options ?? [], `${question.id ?? index}-${attempt}`),
-        })),
-    [questions, attempt],
+        }));
+    },
+    [availableExercises, attempt, questions],
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -142,6 +184,10 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
   const finished = normalizedQuestions.length > 0 && Object.keys(answers).length === normalizedQuestions.length;
   const score = Object.values(answers).filter(Boolean).length;
   const percentage = normalizedQuestions.length > 0 ? Math.round((score / normalizedQuestions.length) * 100) : 0;
+
+  if (normalizedQuestions.length === 0) {
+    return null;
+  }
 
   function choose(optionId: string, isCorrect: boolean) {
     if (selectedOptionId) return;
@@ -163,10 +209,11 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="font-serif text-2xl text-white">ტესტი</h3>
-      {normalizedQuestions.length === 0 ? (
-        <EmptyCopy text="მასალა ჯერ არ არის დამატებული" />
-      ) : finished ? (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-serif text-2xl text-white">სავარჯიშოები</h3>
+        {availableExercises[0] ? <Pill tone="gold">{getExerciseTypeLabel(availableExercises[0].type)}</Pill> : null}
+      </div>
+      {finished ? (
         <div className="mt-5 space-y-4">
           <Surface className="p-5">
             <p className="text-lg font-semibold text-white">{`თქვენი შედეგი: ${score} / ${normalizedQuestions.length}`}</p>
@@ -222,7 +269,7 @@ function QuizSection({ questions }: { questions: QuizQuestion[] }) {
       )}
       {!finished ? (
         <div className="mt-5">
-          <PremiumButton href="/quiz" variant="secondary">ტესტების გვერდი</PremiumButton>
+          <PremiumButton href="/quiz" variant="secondary">სავარჯიშოების გვერდი</PremiumButton>
         </div>
       ) : null}
     </GlassCard>
@@ -247,8 +294,4 @@ function hashSeed(value: string) {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
-}
-
-function EmptyCopy({ text }: { text: string }) {
-  return <p className="mt-4 text-sm leading-7 text-[color:var(--muted)]">{text}</p>;
 }

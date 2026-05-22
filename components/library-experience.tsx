@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 import { AccessBadge } from "@/components/access-helpers";
 import { AuthorPortrait } from "@/components/author-portrait";
 import { AuthorInlineEditor, WorkInlineEditor } from "@/components/public-inline-editors";
-import { genreTabs, libraryCategories, periodTabs } from "@/data/library";
-import { EmptyState, GlassCard, Pill, PremiumButton, SearchBar, SectionTitle, Surface, Tabs } from "@/components/ui";
+import { genreTabs, periodTabs } from "@/data/library";
+import { EmptyState, GlassCard, Pill, PremiumButton, SearchBar, SectionTitle, Tabs } from "@/components/ui";
 import type { AccessLevel } from "@/src/lib/access";
 import type { getLibraryData } from "@/src/lib/content";
 import { matchesSearch } from "@/src/lib/search";
@@ -107,18 +107,6 @@ export function LibraryExperience({ data, isAdmin, initialQuery = "", userPlan }
           />
         </div>
       ) : null}
-
-      <GlassCard className="p-5 sm:p-6">
-        <h3 className="font-serif text-2xl text-white">კატეგორიები</h3>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {libraryCategories.map((category) => (
-            <Surface key={category.title} className="p-4 hover:-translate-y-1 hover:border-[rgba(244,177,93,0.24)]">
-              <p className="font-semibold text-white">{category.title}</p>
-              <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{category.description}</p>
-            </Surface>
-          ))}
-        </div>
-      </GlassCard>
 
       {data.authors.length === 0 && data.works.length === 0 ? (
         <EmptyState

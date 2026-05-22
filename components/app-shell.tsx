@@ -65,7 +65,7 @@ export async function AppShell({ children, currentPath, searchQuery = "" }: AppS
                   href="/quiz"
                   className="hidden h-11 items-center justify-center rounded-full border border-[color:var(--line)] bg-white/5 px-4 text-sm text-white transition hover:border-[rgba(244,177,93,0.35)] hover:bg-white/9 sm:inline-flex"
                 >
-                  ტესტი
+                  სავარჯიშოები
                 </Link>
                 <LogoutButton />
                 <PremiumButton href="/profile">პროფილი</PremiumButton>

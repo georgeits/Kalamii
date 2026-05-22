@@ -50,7 +50,7 @@ export function AuthorDetailPage({ author, isAdmin, userPlan }: { author: Author
             <Pill tone="rose">{author.accessLevelLabel}</Pill>
           </div>
           <div className="mt-6">
-            <PremiumButton href="/quiz" variant="secondary">ტესტები ჯერ არ გაქვთ გავლილი</PremiumButton>
+            <PremiumButton href="/quiz" variant="secondary">სავარჯიშოები ჯერ არ გაქვთ გავლილი</PremiumButton>
           </div>
         </GlassCard>
 

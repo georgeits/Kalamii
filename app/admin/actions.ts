@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ADMIN_EMAIL } from "@/src/lib/auth";
+import { extractLegacyQuizData } from "@/src/lib/exercises";
 import { getCurrentProfile } from "@/src/lib/content";
 import { ensureSlug } from "@/src/lib/slug";
 import { createAdminClient } from "@/src/lib/supabase/admin";
@@ -37,6 +38,7 @@ function revalidateContentRoutes() {
   revalidatePath("/authors");
   revalidatePath("/works");
   revalidatePath("/library");
+  revalidatePath("/quiz");
   revalidatePath("/profile");
   revalidatePath("/dashboard");
 }
@@ -116,7 +118,9 @@ export async function createWorkAction(formData: FormData) {
   const title = requiredText(formData, "title");
   const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${crypto.randomUUID().slice(0, 8)}`);
 
-  const { data, error } = await supabase
+  const exerciseData = parseExerciseData(formData.get("exercise_data"));
+
+  const { data: createdWork, error: createError } = await supabase
     .from("works")
     .insert({
       slug,
@@ -127,7 +131,8 @@ export async function createWorkAction(formData: FormData) {
       summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
       plan: requiredText(formData, "plan") || null,
       analysis: requiredText(formData, "analysis") || null,
-      quiz_data: parseQuizQuestions(formData.get("quiz_questions")),
+      exercise_data: exerciseData,
+      quiz_data: extractLegacyQuizData(exerciseData),
       themes: parseList(formData.get("themes")),
       characters: parseList(formData.get("characters")),
       symbols: parseList(formData.get("symbols")),
@@ -137,12 +142,12 @@ export async function createWorkAction(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !data?.id) {
-    throw new Error(`ნაწარმოების დამატება ვერ მოხერხდა: ${error?.message ?? "უცნობი შეცდომა"}`);
+  if (createError || !createdWork?.id) {
+    throw new Error(`ნაწარმოების დამატება ვერ მოხერხდა: ${createError?.message ?? "უცნობი შეცდომა"}`);
   }
 
   revalidateContentRoutes();
-  redirect(`/admin/works/${data.id}`);
+  redirect(`/admin/works/${createdWork.id}`);
 }
 
 export async function updateWorkAction(formData: FormData) {
@@ -151,6 +156,8 @@ export async function updateWorkAction(formData: FormData) {
   const id = requiredText(formData, "id");
   const title = requiredText(formData, "title");
   const slug = ensureSlug(requiredText(formData, "slug") || title, `work-${id.slice(0, 8)}`);
+
+  const exerciseData = parseExerciseData(formData.get("exercise_data"));
 
   const { error } = await supabase
     .from("works")
@@ -163,7 +170,8 @@ export async function updateWorkAction(formData: FormData) {
       summary_chapters: parseSummaryChapters(formData.get("summary_chapters")),
       plan: requiredText(formData, "plan") || null,
       analysis: requiredText(formData, "analysis") || null,
-      quiz_data: parseQuizQuestions(formData.get("quiz_questions")),
+      exercise_data: exerciseData,
+      quiz_data: extractLegacyQuizData(exerciseData),
       themes: parseList(formData.get("themes")),
       characters: parseList(formData.get("characters")),
       symbols: parseList(formData.get("symbols")),
@@ -191,7 +199,7 @@ export async function deleteWorkAction(formData: FormData) {
   redirect("/admin");
 }
 
-function parseQuizQuestions(value: FormDataEntryValue | null) {
+function parseExerciseData(value: FormDataEntryValue | null) {
   try {
     const parsed = JSON.parse(String(value ?? "[]"));
     return Array.isArray(parsed) ? parsed : [];

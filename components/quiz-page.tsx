@@ -7,7 +7,10 @@ import {
   getExerciseTypeLabel,
   type ExerciseProgressRecord,
   type ExerciseSet,
+  type MultipleChoiceExerciseSet,
   type ReadingQuestion,
+  type ReadingComprehensionExerciseSet,
+  type TextCorrectionExerciseSet,
 } from "@/src/lib/exercises";
 import type { getWorkProfiles } from "@/src/lib/content";
 
@@ -20,6 +23,28 @@ type ExerciseEntry = {
   genreLabel: string;
   exercise: ExerciseSet;
 };
+
+type ExerciseEntryFor<TExercise extends ExerciseSet> = Omit<ExerciseEntry, "exercise"> & {
+  exercise: TExercise;
+};
+
+function hasQuestionsExercise(
+  exercise: ExerciseSet,
+): exercise is MultipleChoiceExerciseSet | ReadingComprehensionExerciseSet {
+  return exercise.type === "multiple_choice" || exercise.type === "reading_comprehension";
+}
+
+function isMultipleChoiceEntry(entry: ExerciseEntry): entry is ExerciseEntryFor<MultipleChoiceExerciseSet> {
+  return entry.exercise.type === "multiple_choice";
+}
+
+function isTextCorrectionEntry(entry: ExerciseEntry): entry is ExerciseEntryFor<TextCorrectionExerciseSet> {
+  return entry.exercise.type === "text_correction";
+}
+
+function isReadingComprehensionEntry(entry: ExerciseEntry): entry is ExerciseEntryFor<ReadingComprehensionExerciseSet> {
+  return entry.exercise.type === "reading_comprehension";
+}
 
 export function QuizPage({
   works,
@@ -154,27 +179,33 @@ export function QuizPage({
 }
 
 function ExercisePanel({ entry }: { entry: ExerciseEntry }) {
-  if (entry.exercise.type === "text_correction") {
+  if (isTextCorrectionEntry(entry)) {
     return <TextCorrectionPanel entry={entry} />;
   }
 
-  if (entry.exercise.type === "reading_comprehension") {
+  if (isReadingComprehensionEntry(entry)) {
     return <ReadingComprehensionPanel entry={entry} />;
   }
 
-  return <MultipleChoicePanel entry={entry} />;
+  if (isMultipleChoiceEntry(entry)) {
+    return <MultipleChoicePanel entry={entry} />;
+  }
+
+  return null;
 }
 
-function MultipleChoicePanel({ entry }: { entry: ExerciseEntry }) {
+function MultipleChoicePanel({ entry }: { entry: ExerciseEntryFor<MultipleChoiceExerciseSet> }) {
   const questions = useMemo(
     () =>
-      shuffleArray(
-        entry.exercise.content.questions.map((question, index) => ({
-          ...question,
-          options: shuffleArray(question.options, `${entry.key}:${question.id}:${index}`),
-        })),
-        `${entry.key}:questions`,
-      ),
+      hasQuestionsExercise(entry.exercise) && entry.exercise.type === "multiple_choice"
+        ? shuffleArray(
+            entry.exercise.content.questions.map((question, index) => ({
+              ...question,
+              options: shuffleArray(question.options, `${entry.key}:${question.id}:${index}`),
+            })),
+            `${entry.key}:questions`,
+          )
+        : [],
     [entry],
   );
 
@@ -250,7 +281,7 @@ function MultipleChoicePanel({ entry }: { entry: ExerciseEntry }) {
   );
 }
 
-function TextCorrectionPanel({ entry }: { entry: ExerciseEntry }) {
+function TextCorrectionPanel({ entry }: { entry: ExerciseEntryFor<TextCorrectionExerciseSet> }) {
   const [userText, setUserText] = useState(entry.exercise.content.incorrectText);
   const [checked, setChecked] = useState(false);
   const comparison = checked ? compareTexts(userText, entry.exercise.content.correctText) : null;
@@ -331,8 +362,8 @@ function TextCorrectionPanel({ entry }: { entry: ExerciseEntry }) {
   );
 }
 
-function ReadingComprehensionPanel({ entry }: { entry: ExerciseEntry }) {
-  const questions = entry.exercise.content.questions;
+function ReadingComprehensionPanel({ entry }: { entry: ExerciseEntryFor<ReadingComprehensionExerciseSet> }) {
+  const questions = hasQuestionsExercise(entry.exercise) ? entry.exercise.content.questions : [];
   const [answers, setAnswers] = useState<Record<string, string | boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const evaluation = submitted ? evaluateReadingQuestions(questions, answers) : null;

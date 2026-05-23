@@ -14,7 +14,7 @@ export default async function Quiz() {
         {
           id: exercise.id,
           title: exercise.title,
-          type: exercise.type,
+          exercise_type: exercise.exercise_type,
           difficulty: exercise.difficulty,
           description: exercise.description ?? "",
           content: exercise.content,

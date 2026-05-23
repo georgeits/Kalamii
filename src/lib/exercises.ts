@@ -188,7 +188,7 @@ function normalizeExerciseSet(item: unknown, index: number): ExerciseSet | null 
   }
 
   const record = item as Record<string, unknown>;
-  const type = String(record.type ?? "");
+  const type = String(record.exercise_type ?? record.type ?? "");
   const difficulty = normalizeDifficulty(record.difficulty);
   const base = {
     id: String(record.id ?? crypto.randomUUID()),

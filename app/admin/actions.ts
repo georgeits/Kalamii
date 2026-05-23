@@ -222,7 +222,7 @@ export async function createStandaloneExerciseAction(formData: FormData) {
     .from("standalone_exercises")
     .insert({
       title: requiredText(formData, "exercise_title"),
-      type: requiredText(formData, "exercise_type"),
+      exercise_type: requiredText(formData, "exercise_type"),
       difficulty: requiredText(formData, "exercise_difficulty") || "medium",
       description: requiredText(formData, "exercise_description") || null,
       content: parseExerciseContent(formData.get("exercise_content")),
@@ -248,7 +248,7 @@ export async function updateStandaloneExerciseAction(formData: FormData) {
     .from("standalone_exercises")
     .update({
       title: requiredText(formData, "exercise_title"),
-      type: requiredText(formData, "exercise_type"),
+      exercise_type: requiredText(formData, "exercise_type"),
       difficulty: requiredText(formData, "exercise_difficulty") || "medium",
       description: requiredText(formData, "exercise_description") || null,
       content: parseExerciseContent(formData.get("exercise_content")),

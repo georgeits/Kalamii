@@ -31,7 +31,7 @@ export function AdminExercisesPage({ exercises }: { exercises: StandaloneExercis
                   <p className="mt-1 text-sm text-[color:var(--muted)]">{exercise.description?.trim() || "დამოუკიდებელი სავარჯიშო"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Pill tone="gold">{getExerciseTypeLabel(exercise.type)}</Pill>
+                  <Pill tone="gold">{getExerciseTypeLabel(exercise.exercise_type)}</Pill>
                   <Pill tone="rose">{exercise.difficulty}</Pill>
                 </div>
               </div>
@@ -66,7 +66,7 @@ export function AdminStandaloneExerciseEditor({
           {
             id: exercise.id,
             title: exercise.title,
-            type: exercise.type,
+            exercise_type: exercise.exercise_type,
             difficulty: exercise.difficulty,
             description: exercise.description ?? "",
             content: exercise.content,

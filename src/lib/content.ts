@@ -102,7 +102,7 @@ export type WorkRecord = {
 export type StandaloneExerciseRecord = {
   id: string;
   title: string;
-  type: "multiple_choice" | "text_correction" | "reading_comprehension";
+  exercise_type: "multiple_choice" | "text_correction" | "reading_comprehension";
   difficulty: "easy" | "medium" | "hard";
   description?: string | null;
   content: unknown;
@@ -492,7 +492,7 @@ export async function getStandaloneExercises() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("standalone_exercises")
-    .select("id, title, type, difficulty, description, content, access_level, created_at, updated_at")
+    .select("id, title, exercise_type, difficulty, description, content, access_level, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -502,7 +502,7 @@ export async function getStandaloneExercises() {
   return ((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
     id: String(item.id ?? ""),
     title: String(item.title ?? ""),
-    type: String(item.type ?? "multiple_choice") as StandaloneExerciseRecord["type"],
+    exercise_type: String(item.exercise_type ?? item.type ?? "multiple_choice") as StandaloneExerciseRecord["exercise_type"],
     difficulty: String(item.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],
     description: (item.description as string | null | undefined) ?? null,
     content: item.content ?? {},
@@ -516,7 +516,7 @@ export async function getStandaloneExerciseById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("standalone_exercises")
-    .select("id, title, type, difficulty, description, content, access_level, created_at, updated_at")
+    .select("id, title, exercise_type, difficulty, description, content, access_level, created_at, updated_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -528,16 +528,17 @@ export async function getStandaloneExerciseById(id: string) {
     return null;
   }
 
+  const record = data as Record<string, unknown>;
   return {
-    id: String(data.id ?? ""),
-    title: String(data.title ?? ""),
-    type: String(data.type ?? "multiple_choice") as StandaloneExerciseRecord["type"],
-    difficulty: String(data.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],
-    description: (data.description as string | null | undefined) ?? null,
-    content: (data.content as unknown) ?? {},
-    access_level: String(data.access_level ?? "premium") as AccessLevel,
-    created_at: (data.created_at as string | undefined) ?? undefined,
-    updated_at: (data.updated_at as string | undefined) ?? undefined,
+    id: String(record.id ?? ""),
+    title: String(record.title ?? ""),
+    exercise_type: String(record.exercise_type ?? record.type ?? "multiple_choice") as StandaloneExerciseRecord["exercise_type"],
+    difficulty: String(record.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],
+    description: (record.description as string | null | undefined) ?? null,
+    content: record.content ?? {},
+    access_level: String(record.access_level ?? "premium") as AccessLevel,
+    created_at: (record.created_at as string | undefined) ?? undefined,
+    updated_at: (record.updated_at as string | undefined) ?? undefined,
   } satisfies StandaloneExerciseRecord;
 }
 

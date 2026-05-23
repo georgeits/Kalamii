@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  createEmptyExerciseSet,
   createEmptyMultipleChoiceQuestion,
   getExerciseTypeLabel,
   validateExerciseSets,
   type ExerciseSet,
-  type ExerciseType,
 } from "@/src/lib/exercises";
+import { createInitialStandaloneExercise } from "@/src/lib/exercises/defaults";
 
 export function StandaloneExerciseFields({
   initialExercise,
@@ -227,8 +226,4 @@ function ReadingExerciseEditor({
       />
     </div>
   );
-}
-
-export function createInitialStandaloneExercise(type: ExerciseType = "text_correction") {
-  return createEmptyExerciseSet(1, type);
 }

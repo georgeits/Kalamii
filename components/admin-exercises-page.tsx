@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { DeleteStandaloneExerciseButton, SaveButton } from "@/components/admin-server-buttons";
 import { GlassCard, Pill, PremiumButton, SectionTitle } from "@/components/ui";
-import { createInitialStandaloneExercise, StandaloneExerciseFields } from "@/components/standalone-exercise-fields";
+import { StandaloneExerciseFields } from "@/components/standalone-exercise-fields";
 import { getExerciseTypeLabel, normalizeExerciseSets, type ExerciseType } from "@/src/lib/exercises";
 import type { StandaloneExerciseRecord } from "@/src/lib/content";
+import { createInitialStandaloneExercise } from "@/src/lib/exercises/defaults";
 
 export function AdminExercisesPage({ exercises }: { exercises: StandaloneExerciseRecord[] }) {
   return (

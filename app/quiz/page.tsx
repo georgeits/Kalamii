@@ -13,6 +13,7 @@ export default async function Quiz() {
       normalizeExerciseSets([
         {
           id: exercise.id,
+          slug: exercise.slug,
           title: exercise.title,
           exercise_type: exercise.exercise_type,
           difficulty: exercise.difficulty,

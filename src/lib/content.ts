@@ -101,6 +101,7 @@ export type WorkRecord = {
 
 export type StandaloneExerciseRecord = {
   id: string;
+  slug: string;
   title: string;
   exercise_type: "multiple_choice" | "text_correction" | "reading_comprehension";
   difficulty: "easy" | "medium" | "hard";
@@ -492,7 +493,7 @@ export async function getStandaloneExercises() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("standalone_exercises")
-    .select("id, title, exercise_type, difficulty, description, content, access_level, created_at, updated_at")
+    .select("id, slug, title, exercise_type, difficulty, description, content, access_level, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -501,6 +502,7 @@ export async function getStandaloneExercises() {
 
   return ((data ?? []) as Array<Record<string, unknown>>).map((item) => ({
     id: String(item.id ?? ""),
+    slug: ensureSlug(String(item.slug ?? item.title ?? ""), `exercise-${String(item.id ?? "").slice(0, 8)}`),
     title: String(item.title ?? ""),
     exercise_type: String(item.exercise_type ?? item.type ?? "multiple_choice") as StandaloneExerciseRecord["exercise_type"],
     difficulty: String(item.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],
@@ -516,7 +518,7 @@ export async function getStandaloneExerciseById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("standalone_exercises")
-    .select("id, title, exercise_type, difficulty, description, content, access_level, created_at, updated_at")
+    .select("id, slug, title, exercise_type, difficulty, description, content, access_level, created_at, updated_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -531,6 +533,7 @@ export async function getStandaloneExerciseById(id: string) {
   const record = data as Record<string, unknown>;
   return {
     id: String(record.id ?? ""),
+    slug: ensureSlug(String(record.slug ?? record.title ?? ""), `exercise-${String(record.id ?? "").slice(0, 8)}`),
     title: String(record.title ?? ""),
     exercise_type: String(record.exercise_type ?? record.type ?? "multiple_choice") as StandaloneExerciseRecord["exercise_type"],
     difficulty: String(record.difficulty ?? "medium") as StandaloneExerciseRecord["difficulty"],

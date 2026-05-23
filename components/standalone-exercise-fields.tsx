@@ -8,6 +8,7 @@ import {
   type ExerciseSet,
 } from "@/src/lib/exercises";
 import { createInitialStandaloneExercise } from "@/src/lib/exercises/defaults";
+import { slugifyGeorgian } from "@/src/lib/slug";
 
 export function StandaloneExerciseFields({
   initialExercise,
@@ -18,6 +19,7 @@ export function StandaloneExerciseFields({
 }) {
   const [exercise, setExercise] = useState<ExerciseSet>(initialExercise);
   const errors = useMemo(() => validateExerciseSets([exercise]), [exercise]);
+  const slug = useMemo(() => slugifyGeorgian(exercise.title), [exercise.title]);
 
   useEffect(() => {
     setExercise(initialExercise);
@@ -27,6 +29,7 @@ export function StandaloneExerciseFields({
     <div className="space-y-4">
       <input type="hidden" name="exercise_type" value={exercise.type} readOnly />
       <input type="hidden" name="exercise_title" value={exercise.title} readOnly />
+      <input type="hidden" name="slug" value={slug} readOnly />
       <input type="hidden" name="exercise_difficulty" value={exercise.difficulty} readOnly />
       <input type="hidden" name="exercise_description" value={exercise.description ?? ""} readOnly />
       <input type="hidden" name="exercise_content" value={JSON.stringify(exercise.content)} readOnly />
@@ -45,6 +48,7 @@ export function StandaloneExerciseFields({
             onChange={(event) => setExercise((current) => ({ ...current, title: event.target.value }))}
             placeholder="სათაური"
             className="h-10 rounded-[14px] border border-[color:var(--line)] bg-white/[0.045] px-3 text-sm text-white outline-none"
+            required
           />
           <select
             value={exercise.difficulty}
@@ -55,6 +59,17 @@ export function StandaloneExerciseFields({
             <option value="medium">საშუალო</option>
             <option value="hard">რთული</option>
           </select>
+        </div>
+        <div className="mt-3">
+          <input
+            type="text"
+            name="slug_preview"
+            readOnly
+            value={slug}
+            placeholder="slug ავტომატურად შეიქმნება"
+            className="h-10 w-full rounded-[14px] border border-[color:var(--line)] bg-white/[0.045] px-3 text-sm text-white outline-none"
+          />
+          <p className="mt-2 text-xs text-[color:var(--muted)]">slug ავტომატურად შეიქმნება სათაურიდან.</p>
         </div>
         <textarea
           value={exercise.description ?? ""}
@@ -77,6 +92,11 @@ export function StandaloneExerciseFields({
               <p key={error} className="text-sm text-[color:var(--danger)]">{error}</p>
             ))}
           </div>
+        </div>
+      ) : null}
+      {!exercise.title.trim() ? (
+        <div className="rounded-[14px] border border-[rgba(255,156,140,0.24)] bg-[rgba(255,156,140,0.08)] px-4 py-3">
+          <p className="text-sm text-[color:var(--danger)]">სათაური აუცილებელია.</p>
         </div>
       ) : null}
     </div>

@@ -64,6 +64,14 @@ function requiredText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function requireValue(value: string, message: string) {
+  if (!value.trim()) {
+    throw new Error(message);
+  }
+
+  return value.trim();
+}
+
 function calculateExpiration(duration: string, customDate: string) {
   if (duration === "custom") {
     return customDate ? new Date(customDate).toISOString() : null;
@@ -93,6 +101,43 @@ function parseExerciseContent(value: FormDataEntryValue | null) {
   } catch {
     return {};
   }
+}
+
+async function resolveUniqueStandaloneExerciseSlug({
+  supabase,
+  title,
+  existingSlug,
+  excludeId,
+}: {
+  supabase: ReturnType<typeof createAdminClient>;
+  title: string;
+  existingSlug: string;
+  excludeId?: string;
+}) {
+  const baseSlug = ensureSlug(existingSlug || title, `exercise-${crypto.randomUUID().slice(0, 8)}`);
+
+  if (!baseSlug.trim()) {
+    throw new Error("Slug ვერ შეიქმნა.");
+  }
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const candidate = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
+    let query = supabase.from("standalone_exercises").select("id").eq("slug", candidate);
+    if (excludeId) {
+      query = query.neq("id", excludeId);
+    }
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      throw new Error(`Slug-ის შემოწმება ვერ მოხერხდა: ${error.message}`);
+    }
+
+    if (!data?.id) {
+      return candidate;
+    }
+  }
+
+  throw new Error("უნიკალური slug ვერ შეიქმნა.");
 }
 
 export async function createAuthorAction(formData: FormData) {
@@ -218,11 +263,20 @@ export async function deleteWorkAction(formData: FormData) {
 export async function createStandaloneExerciseAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
+  const title = requireValue(requiredText(formData, "exercise_title"), "სათაური აუცილებელია.");
+  const exerciseType = requireValue(requiredText(formData, "exercise_type"), "სავარჯიშოს ტიპი აუცილებელია.");
+  const slug = await resolveUniqueStandaloneExerciseSlug({
+    supabase,
+    title,
+    existingSlug: requiredText(formData, "slug"),
+  });
+
   const { data, error } = await supabase
     .from("standalone_exercises")
     .insert({
-      title: requiredText(formData, "exercise_title"),
-      exercise_type: requiredText(formData, "exercise_type"),
+      slug,
+      title,
+      exercise_type: exerciseType,
       difficulty: requiredText(formData, "exercise_difficulty") || "medium",
       description: requiredText(formData, "exercise_description") || null,
       content: parseExerciseContent(formData.get("exercise_content")),
@@ -243,12 +297,21 @@ export async function updateStandaloneExerciseAction(formData: FormData) {
   await requireAdmin();
   const supabase = createAdminClient();
   const id = requiredText(formData, "id");
+  const title = requireValue(requiredText(formData, "exercise_title"), "სათაური აუცილებელია.");
+  const exerciseType = requireValue(requiredText(formData, "exercise_type"), "სავარჯიშოს ტიპი აუცილებელია.");
+  const slug = await resolveUniqueStandaloneExerciseSlug({
+    supabase,
+    title,
+    existingSlug: requiredText(formData, "slug"),
+    excludeId: id,
+  });
 
   const { error } = await supabase
     .from("standalone_exercises")
     .update({
-      title: requiredText(formData, "exercise_title"),
-      exercise_type: requiredText(formData, "exercise_type"),
+      slug,
+      title,
+      exercise_type: exerciseType,
       difficulty: requiredText(formData, "exercise_difficulty") || "medium",
       description: requiredText(formData, "exercise_description") || null,
       content: parseExerciseContent(formData.get("exercise_content")),
